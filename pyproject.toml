@@ -4,7 +4,14 @@ version = "0.1.0"
 description = "Traffic generation and reinforcement learning based traffic signal control in SUMO"
 readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "numpy>=2.5.4",
+    "pandas>=3.1.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
@@ -14,9 +21,16 @@ dev = [
 sumo = [
     "eclipse-sumo==1.28.0",
 ]
+notebook = [
+    "jupyterlab>=4.6.5",
+    "matplotlib>=3.11.2",
+]
 
 [tool.uv]
-default-groups = ["dev", "sumo"]
+default-groups = ["dev", "sumo", "notebook"]
+
+[tool.uv.build-backend]
+module-name = "trafficgen"
 
 [tool.ruff]
 line-length = 100

@@ -6,12 +6,11 @@ from pathlib import Path
 
 import pytest
 
-REPO_ROOT = Path(__file__).parent.parent
+REPO_ROOT = Path(__file__).parents[2]
 SCENARIOS_DIR = REPO_ROOT / "sumo" / "scenarios"
 SCENARIOS = sorted(path.name for path in SCENARIOS_DIR.iterdir() if path.is_dir())
 
 
-@pytest.mark.sumo
 @pytest.mark.parametrize("scenario", SCENARIOS)
 def test_scenario_runs_in_sumo(scenario):
     result = subprocess.run(

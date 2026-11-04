@@ -48,5 +48,4 @@ venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = ["sumo: runs the real SUMO simulator, which must be installed"]
+testpaths = ["tests/main", "tests/sumo"]

@@ -36,7 +36,9 @@ def main() -> None:
     counts = model.sample(args.start, args.end, seed=args.seed, scale=args.scale)
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
-    counts.rename_axis("datetime").to_csv(args.output if args.output else sys.stdout)
+    # A fixed line ending: on Windows, text mode stdout would otherwise turn \r\n into \r\r\n.
+    target = args.output if args.output else sys.stdout
+    counts.rename_axis("datetime").to_csv(target, lineterminator="\n")
 
 
 if __name__ == "__main__":

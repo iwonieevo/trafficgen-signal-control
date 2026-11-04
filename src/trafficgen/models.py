@@ -118,8 +118,9 @@ def _weekly_profile(values: pd.Series) -> pd.Series:
     Returns:
         Average value per (weekday, hour).
     """
-    keys = _weekday_hour_keys(pd.DatetimeIndex(values.index))
-    return cast(pd.Series, values.groupby(keys).mean())
+    index = pd.DatetimeIndex(values.index)
+    profile = cast(pd.Series, values.groupby([index.day_of_week, index.hour]).mean())
+    return profile.rename_axis(index=["weekday", "hour"])
 
 
 class HourlyCountModel(ABC):

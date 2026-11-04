@@ -49,7 +49,7 @@ def find_executable(gui: bool) -> str:
     """
     name = "sumo-gui" if gui else "sumo"
     try:
-        import sumo
+        import sumo  # pyright: ignore[reportMissingImports]
     except ImportError:
         executable = shutil.which(name)
     else:

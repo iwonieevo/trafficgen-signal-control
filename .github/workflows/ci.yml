@@ -15,4 +15,5 @@ jobs:
       # Only the dev group: SUMO and other heavy dependencies are not needed here.
       - run: uv sync --locked --no-default-groups --group dev
       - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync pyright
       - run: uv run --no-sync pytest

@@ -15,7 +15,7 @@ def test_scenarios_exist():
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=lambda path: path.name)
 def test_scenario_config_is_valid(scenario):
-    # scripts/run-sumo.sh requires exactly one config per scenario.
+    # scripts/run_sumo.py requires exactly one config per scenario.
     configs = list(scenario.glob("*.sumocfg"))
     assert len(configs) == 1
 

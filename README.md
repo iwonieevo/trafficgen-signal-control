@@ -19,7 +19,6 @@ The primary data source is the [Traffic Prediction Dataset](https://www.kaggle.c
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs the Python version from `.python-version` and all Python dependencies
 - Git
-- Bash (for the current simulation launcher)
 
 ### Installation
 
@@ -29,23 +28,23 @@ Install the project dependencies, including SUMO 1.28.0 (about 500 MB), into `.v
 uv sync
 ```
 
-The current launcher uses a Bash script and is intended for Linux-based environments. Other platforms may require different commands to launch SUMO.
+SUMO is installed from the `eclipse-sumo` package, which has builds for Linux, Windows (x86-64) and macOS 15 or newer on Apple silicon. There is no build for Intel Macs: install [SUMO](https://sumo.dlr.de/docs/Installing/index.html) separately, and add `--no-group sumo` to the `uv` commands. On macOS, the official documentation lists [XQuartz](https://sumo.dlr.de/docs/Installing/index.html) as a requirement for `sumo-gui`.
 
 ### Running Simulations
 
-Run the following command from the repository root:
+Run a scenario from the repository root, on any platform:
 
-```text
-Usage: ./scripts/run-sumo.sh <scenario> [gui]
+```bash
+uv run python scripts/run_sumo.py <scenario> [--gui]
 ```
 
 - `<scenario>`: name of a directory in `sumo/scenarios/`.
-- `gui`: optional argument to launch the simulation with SUMO-GUI. Without it, the simulation runs headlessly.
+- `--gui`: launch the simulation with SUMO-GUI. Without it, the simulation runs headlessly.
 
 Example:
 
 ```bash
-./scripts/run-sumo.sh single-intersection gui
+uv run python scripts/run_sumo.py single-intersection --gui
 ```
 
 ### Generating Traffic

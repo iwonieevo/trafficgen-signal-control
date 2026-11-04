@@ -1,0 +1,29 @@
+name: SUMO
+on:
+  workflow_dispatch:
+  pull_request:
+    paths: &sumo-paths
+      - ".github/workflows/sumo.yml"
+      - "pyproject.toml"
+      - "scripts/run_sumo.py"
+      - "sumo/**"
+      - "uv.lock"
+  push:
+    branches: [main]
+    paths: *sumo-paths
+
+jobs:
+  run-scenarios:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
+        with:
+          enable-cache: true
+      - run: uv sync --locked --no-default-groups --group sumo
+      - run: uv run --no-sync python scripts/run_sumo.py hello-world
+      - run: uv run --no-sync python scripts/run_sumo.py single-intersection

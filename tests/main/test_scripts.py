@@ -82,7 +82,7 @@ def test_generate_prints_to_stdout_by_default(monkeypatch, load_script, config_p
 
 
 def test_generate_stdout_has_clean_line_endings_when_redirected(config_path):
-    script = Path(__file__).parent.parent / "scripts" / "generate_traffic.py"
+    script = Path(__file__).parents[2] / "scripts" / "generate_traffic.py"
     result = subprocess.run(
         [
             sys.executable,

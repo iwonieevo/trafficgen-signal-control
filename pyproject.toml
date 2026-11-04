@@ -43,10 +43,9 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pyright]
 typeCheckingMode = "standard"
-include = ["src", "scripts", "tests", "notebook_tests"]
+include = ["src", "scripts", "tests"]
 venvPath = "."
 venv = ".venv"
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
-markers = ["sumo: runs the real SUMO simulator, which must be installed"]
+testpaths = ["tests/main", "tests/sumo"]

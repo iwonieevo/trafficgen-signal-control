@@ -7,7 +7,7 @@ on:
       - "pyproject.toml"
       - "scripts/run_sumo.py"
       - "sumo/**"
-      - "tests/test_sumo_simulation.py"
+      - "tests/sumo/**"
       - "uv.lock"
   push:
     branches: [main]
@@ -15,15 +15,11 @@ on:
 
 jobs:
   run-scenarios:
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
       - run: uv sync --locked --no-default-groups --group dev --group sumo
-      - run: uv run --no-sync pytest -m sumo
+      - run: uv run --no-sync pytest tests/sumo

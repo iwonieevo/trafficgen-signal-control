@@ -92,16 +92,26 @@ Run the same checks as CI before pushing:
 ```bash
 uv run ruff check .
 uv run pyright
-uv run pytest
+uv run pytest tests/main
 ```
 
-Tests marked `sumo` run the real simulator. CI runs them in the SUMO workflow on Linux, Windows and macOS, and all other tests in the `check` job. To skip them locally, use `uv run pytest -m "not sumo"`.
+Tests are grouped by what they need:
 
-The notebooks need the downloaded dataset, so they are not part of `uv run pytest` or CI. Run them with this when a change could affect them:
+| Group | What it tests | Where it runs |
+|---|---|---|
+| `tests/main/` | Generator, scripts and scenario files, without SUMO | `CI` workflow, on every pull request |
+| `tests/sumo/` | Scenarios in the real simulator | `SUMO` workflow, when SUMO files change |
+| `tests/notebooks/` | Runs every notebook, needs the downloaded dataset | Only by hand |
+
+`uv run pytest` runs the first two groups. Run the notebooks with `uv run pytest tests/notebooks` when a change could affect them.
+
+Workflows run on Ubuntu with the Python version from `.python-version`. To check Windows and macOS as well, start the `All platforms` workflow by hand, from the Actions tab or with:
 
 ```bash
-uv run pytest notebook_tests
+gh workflow run all-platforms.yml --ref <branch>
 ```
+
+`pyproject.toml` also allows Python 3.12 and 3.13, since the dependencies resolve for them, but CI does not test them.
 
 ## Project Structure
 
@@ -114,8 +124,7 @@ The repository is under active development.
 | `notebooks/` | Data analysis and model fit |
 | `sumo/scenarios/` | SUMO simulation scenarios |
 | `scripts/` | Utilities for downloading data, generating traffic and running simulations |
-| `tests/` | Automated tests |
-| `notebook_tests/` | Tests that run the notebooks, run manually |
+| `tests/` | Automated tests, grouped by what they need |
 | `docs/images/` | Images used in project documentation |
 
 ## Available Scenarios

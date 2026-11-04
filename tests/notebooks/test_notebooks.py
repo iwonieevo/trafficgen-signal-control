@@ -1,7 +1,7 @@
 """Run every notebook from start to end. These tests need the downloaded dataset.
 
-This folder is outside the pytest testpaths, so neither `uv run pytest` nor CI runs it.
-Run it with `uv run pytest notebook_tests`.
+This group is not in the pytest testpaths, so neither `uv run pytest` nor CI runs it.
+Run it with `uv run pytest tests/notebooks`.
 """
 
 import subprocess
@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-NOTEBOOKS_DIR = Path(__file__).parent.parent / "notebooks"
+NOTEBOOKS_DIR = Path(__file__).parents[2] / "notebooks"
 NOTEBOOKS = sorted(NOTEBOOKS_DIR.glob("*.ipynb"))
 
 

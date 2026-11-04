@@ -1,25 +1,16 @@
 """Tests of the SUMO launcher."""
 
-import importlib.util
 import shutil
-import subprocess
 import sys
-from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
 
-SCRIPT = Path(__file__).parent.parent / "scripts" / "run_sumo.py"
-
 
 @pytest.fixture
-def launcher() -> ModuleType:
+def launcher(load_script) -> ModuleType:
     """Import the launcher script as a module."""
-    spec = importlib.util.spec_from_file_location("run_sumo", SCRIPT)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    return load_script("run_sumo")
 
 
 def test_find_config_returns_the_scenario_config(launcher):
@@ -64,11 +55,3 @@ def test_find_executable_reports_a_missing_installation(launcher, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda name, path=None: None)
     with pytest.raises(SystemExit, match="SUMO executable not found: sumo-gui"):
         launcher.find_executable(True)
-
-
-def test_scenario_runs_in_sumo():
-    pytest.importorskip("sumo")
-    result = subprocess.run(
-        [sys.executable, str(SCRIPT), "hello-world"], capture_output=True, check=False
-    )
-    assert result.returncode == 0

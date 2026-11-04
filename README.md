@@ -91,6 +91,8 @@ uv run ruff check .
 uv run pytest
 ```
 
+Tests marked `sumo` run the real simulator. CI runs them in the SUMO workflow on Linux, Windows and macOS, and all other tests in the `check` job. To skip them locally, use `uv run pytest -m "not sumo"`.
+
 ## Project Structure
 
 The repository is under active development.

@@ -40,3 +40,4 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["sumo: runs the real SUMO simulator, which must be installed"]

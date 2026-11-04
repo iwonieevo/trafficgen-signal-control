@@ -50,10 +50,10 @@ Example:
 
 ### Generating Traffic
 
-Download the dataset and split it into one file per junction in `data/processed/` (no Kaggle account is needed):
+Download the Kaggle dataset to `data/raw/kaggle_traffic.csv` and split it into one file per junction, `data/processed/kaggle_junction_<n>.csv` (no Kaggle account is needed):
 
 ```bash
-uv run python scripts/download_data.py
+uv run python scripts/download_kaggle_data.py
 ```
 
 Generate hourly vehicle counts for one junction. The start is included, the end is excluded, and both must be whole hours:

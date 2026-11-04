@@ -1,19 +1,19 @@
 # Junctions modelled independently. Each data file has the columns datetime and vehicles.
 # Relative data paths are resolved against the directory of this file.
-# scripts/download_data.py creates these files from the Kaggle dataset.
+# scripts/download_kaggle_data.py creates these files from the Kaggle dataset.
 
 [[junctions]]
 id = "J1"
-data = "../data/processed/junction_1.csv"
+data = "../data/processed/kaggle_junction_1.csv"
 
 [[junctions]]
 id = "J2"
-data = "../data/processed/junction_2.csv"
+data = "../data/processed/kaggle_junction_2.csv"
 
 [[junctions]]
 id = "J3"
-data = "../data/processed/junction_3.csv"
+data = "../data/processed/kaggle_junction_3.csv"
 
 [[junctions]]
 id = "J4"
-data = "../data/processed/junction_4.csv"
+data = "../data/processed/kaggle_junction_4.csv"

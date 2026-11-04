@@ -10,7 +10,8 @@ import pandas as pd
 DATASET_URL = (
     "https://www.kaggle.com/api/v1/datasets/download/fedesoriano/traffic-prediction-dataset"
 )
-FILE_NAME = "traffic.csv"
+ARCHIVE_FILE = "traffic.csv"
+RAW_FILE = "kaggle_traffic.csv"
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
@@ -27,9 +28,9 @@ def download_dataset() -> Path:
         archive = response.read()
 
     RAW_DIR.mkdir(parents=True, exist_ok=True)
-    target = RAW_DIR / FILE_NAME
+    target = RAW_DIR / RAW_FILE
     with zipfile.ZipFile(io.BytesIO(archive)) as zip_file:
-        target.write_bytes(zip_file.read(FILE_NAME))
+        target.write_bytes(zip_file.read(ARCHIVE_FILE))
     return target
 
 
@@ -42,7 +43,7 @@ def split_junctions(source: Path) -> None:
     frame = pd.read_csv(source)
     PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
     for junction, rows in frame.groupby("Junction"):
-        target = PROCESSED_DIR / f"junction_{junction}.csv"
+        target = PROCESSED_DIR / f"kaggle_junction_{junction}.csv"
         renamed = rows.rename(columns={"DateTime": "datetime", "Vehicles": "vehicles"})
         renamed[["datetime", "vehicles"]].to_csv(target, index=False)
         print(f"Saved {target}")

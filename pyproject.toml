@@ -1,0 +1,28 @@
+[project]
+name = "trafficgen-signal-control"
+version = "0.1.0"
+description = "Traffic generation and reinforcement learning based traffic signal control in SUMO"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.3",
+]
+sumo = [
+    "eclipse-sumo==1.28.0",
+]
+
+[tool.uv]
+default-groups = ["dev", "sumo"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

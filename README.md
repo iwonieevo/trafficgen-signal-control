@@ -17,23 +17,16 @@ The primary data source is the [Traffic Prediction Dataset](https://www.kaggle.c
 
 ### Requirements
 
-- Python 3
+- [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs the Python version from `.python-version` and all Python dependencies
 - Git
 - Bash (for the current simulation launcher)
-- SUMO 1.28.0
 
 ### Installation
 
-Create a Python virtual environment:
+Install the project dependencies, including SUMO 1.28.0 (about 500 MB), into `.venv`:
 
 ```bash
-python -m venv .venv
-```
-
-Install the project dependencies:
-
-```bash
-.venv/bin/python -m pip install -r requirements.txt
+uv sync
 ```
 
 The current launcher uses a Bash script and is intended for Linux-based environments. Other platforms may require different commands to launch SUMO.
@@ -46,13 +39,24 @@ Run the following command from the repository root:
 Usage: ./scripts/run-sumo.sh <scenario> [gui]
 ```
 
-- `<scenario>` — name of a directory in `sumo/scenarios/`.
-- `gui` — optional argument to launch the simulation with SUMO-GUI. Without it, the simulation runs headlessly.
+- `<scenario>`: name of a directory in `sumo/scenarios/`.
+- `gui`: optional argument to launch the simulation with SUMO-GUI. Without it, the simulation runs headlessly.
 
 Example:
 
 ```bash
 ./scripts/run-sumo.sh single-intersection gui
+```
+
+### Development
+
+Add a dependency with `uv add <package>`, or `uv add --group <group> <package>` for a dependency group. Commit the updated `uv.lock`.
+
+Run the same checks as CI before pushing:
+
+```bash
+uv run ruff check .
+uv run pytest
 ```
 
 ## Project Structure
@@ -63,6 +67,7 @@ The repository is under active development.
 |---|---|
 | `sumo/scenarios/` | SUMO simulation scenarios |
 | `scripts/` | Utilities for running simulations |
+| `tests/` | Automated tests |
 | `docs/images/` | Images used in project documentation |
 
 ## Available Scenarios

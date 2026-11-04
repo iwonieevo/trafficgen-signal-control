@@ -26,6 +26,7 @@ sumo = [
 notebook = [
     "jupyterlab>=4.6.5",
     "matplotlib>=3.11.2",
+    "statsmodels>=0.15.0",
 ]
 
 [tool.uv]

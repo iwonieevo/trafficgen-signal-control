@@ -5,11 +5,13 @@ description = "Traffic generation and reinforcement learning based traffic signa
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "ipykernel>=7.4.0",
-    "kagglehub>=1.0.3",
-    "matplotlib>=3.11.2",
-    "statsmodels>=0.15.0",
+    "numpy>=2.5.4",
+    "pandas>=3.1.1",
 ]
+
+[build-system]
+requires = ["uv_build>=0.13,<0.14"]
+build-backend = "uv_build"
 
 [dependency-groups]
 dev = [
@@ -19,9 +21,17 @@ dev = [
 sumo = [
     "eclipse-sumo==1.28.0",
 ]
+notebook = [
+    "jupyterlab>=4.6.5",
+    "matplotlib>=3.11.2",
+    "statsmodels>=0.15.0",
+]
 
 [tool.uv]
-default-groups = ["dev", "sumo"]
+default-groups = ["dev", "sumo", "notebook"]
+
+[tool.uv.build-backend]
+module-name = "trafficgen"
 
 [tool.ruff]
 line-length = 100

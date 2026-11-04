@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-SCENARIOS_DIR = Path(__file__).parent.parent / "sumo" / "scenarios"
+SCENARIOS_DIR = Path(__file__).parents[2] / "sumo" / "scenarios"
 SCENARIOS = sorted(path for path in SCENARIOS_DIR.iterdir() if path.is_dir())
 
 

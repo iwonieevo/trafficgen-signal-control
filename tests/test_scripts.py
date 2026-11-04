@@ -1,6 +1,8 @@
 """Tests of the command line scripts, without network access."""
 
+import subprocess
 import sys
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -77,6 +79,28 @@ def test_generate_prints_to_stdout_by_default(monkeypatch, load_script, config_p
     lines = capsys.readouterr().out.splitlines()
     assert lines[0] == "datetime,vehicles"
     assert pd.Timestamp(lines[1].split(",")[0]) == pd.Timestamp("2024-03-04 00:00")
+
+
+def test_generate_stdout_has_clean_line_endings_when_redirected(config_path):
+    script = Path(__file__).parent.parent / "scripts" / "generate_traffic.py"
+    result = subprocess.run(
+        [
+            sys.executable,
+            str(script),
+            "--config",
+            str(config_path),
+            "--junction",
+            "A",
+            "--start",
+            "2024-03-04T00:00",
+            "--end",
+            "2024-03-04T03:00",
+        ],
+        capture_output=True,
+        check=True,
+    )
+    assert b"\r\r\n" not in result.stdout
+    assert len(result.stdout.splitlines()) == 4
 
 
 def test_generate_rejects_an_unknown_junction(monkeypatch, load_script, config_path):

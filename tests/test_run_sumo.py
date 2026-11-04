@@ -2,6 +2,7 @@
 
 import shutil
 import sys
+from pathlib import Path
 from types import ModuleType, SimpleNamespace
 
 import pytest
@@ -34,13 +35,14 @@ def test_find_config_requires_exactly_one_config(launcher, monkeypatch, tmp_path
 
 @pytest.mark.parametrize(("gui", "name"), [(False, "sumo"), (True, "sumo-gui")])
 def test_find_executable_prefers_the_python_package(launcher, monkeypatch, tmp_path, gui, name):
-    program = tmp_path / "bin" / name
+    # Windows only finds programs that have an executable extension.
+    program = tmp_path / "bin" / (f"{name}.exe" if sys.platform == "win32" else name)
     program.parent.mkdir()
     program.touch(mode=0o755)
     monkeypatch.setitem(sys.modules, "sumo", SimpleNamespace(SUMO_HOME=str(tmp_path)))
     monkeypatch.setenv("SUMO_HOME", "unchanged")
 
-    assert launcher.find_executable(gui) == str(program)
+    assert Path(launcher.find_executable(gui)).samefile(program)
     assert launcher.os.environ["SUMO_HOME"] == str(tmp_path)
 
 

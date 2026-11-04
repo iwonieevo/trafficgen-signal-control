@@ -97,6 +97,12 @@ uv run pytest
 
 Tests marked `sumo` run the real simulator. CI runs them in the SUMO workflow on Linux, Windows and macOS, and all other tests in the `check` job. To skip them locally, use `uv run pytest -m "not sumo"`.
 
+The notebooks need the downloaded dataset, so they are not part of `uv run pytest` or CI. Run them with this when a change could affect them:
+
+```bash
+uv run pytest notebook_tests
+```
+
 ## Project Structure
 
 The repository is under active development.
@@ -109,6 +115,7 @@ The repository is under active development.
 | `sumo/scenarios/` | SUMO simulation scenarios |
 | `scripts/` | Utilities for downloading data, generating traffic and running simulations |
 | `tests/` | Automated tests |
+| `notebook_tests/` | Tests that run the notebooks, run manually |
 | `docs/images/` | Images used in project documentation |
 
 ## Available Scenarios

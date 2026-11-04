@@ -8,7 +8,7 @@ import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
-from trafficgen.data import load_junction_counts
+from trafficgen.data import load_counts
 from trafficgen.models import HourlyCountModel, StatisticalCountModel
 
 
@@ -18,13 +18,12 @@ class JunctionConfig:
 
     Attributes:
         id: Unique name of the junction.
-        data: CSV file with the historical counts.
-        source_junction: Value of the ``Junction`` column to read from that file.
+        data: CSV file with the historical counts of this junction, with the columns
+            ``datetime`` and ``vehicles``.
     """
 
     id: str
     data: Path
-    source_junction: int
 
 
 @dataclass(frozen=True)
@@ -56,11 +55,7 @@ def load_config(path: str | Path) -> TrafficConfig:
         raw = tomllib.load(file)
 
     junctions = tuple(
-        JunctionConfig(
-            id=item["id"],
-            data=(path.parent / item["data"]).resolve(),
-            source_junction=item["source_junction"],
-        )
+        JunctionConfig(id=item["id"], data=(path.parent / item["data"]).resolve())
         for item in raw.get("junctions", [])
     )
     ids = [junction.id for junction in junctions]
@@ -81,8 +76,6 @@ def build_generators(config: TrafficConfig) -> dict[str, HourlyCountModel]:
         Fitted models by junction id.
     """
     return {
-        junction.id: StatisticalCountModel().fit(
-            load_junction_counts(junction.data, junction.source_junction)
-        )
+        junction.id: StatisticalCountModel().fit(load_counts(junction.data))
         for junction in config.junctions
     }

@@ -50,7 +50,7 @@ Example:
 
 ### Generating Traffic
 
-Download the dataset into `data/raw/` (no Kaggle account is needed):
+Download the dataset and split it into one file per junction in `data/processed/` (no Kaggle account is needed):
 
 ```bash
 uv run python scripts/download_data.py
@@ -62,7 +62,15 @@ Generate hourly vehicle counts for one junction. The start is included, the end 
 uv run python scripts/generate_traffic.py --junction J1 --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/j1.csv
 ```
 
-Junctions and their input data are defined in `configs/traffic.toml`. From Python:
+Junctions and their data files are defined in `configs/traffic.toml`. To use your own data, point a junction to a CSV file like this, with whole hours and no duplicate datetimes:
+
+```text
+datetime,vehicles
+2017-04-03 00:00:00,48
+2017-04-03 01:00:00,37
+```
+
+From Python:
 
 ```python
 from trafficgen import build_generators, load_config

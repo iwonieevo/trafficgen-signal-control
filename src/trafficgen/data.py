@@ -4,31 +4,29 @@ from pathlib import Path
 
 import pandas as pd
 
-REQUIRED_COLUMNS = {"DateTime", "Junction", "Vehicles"}
+DATETIME_COLUMN = "datetime"
+VEHICLES_COLUMN = "vehicles"
 
 
-def load_junction_counts(path: str | Path, junction: int) -> pd.Series:
+def load_counts(path: str | Path) -> pd.Series:
     """Load the hourly counts of one junction.
 
+    The file must have the columns ``datetime`` and ``vehicles``. Models check the rest
+    when fitting: whole hours, no duplicate datetimes and non-negative counts.
+
     Args:
-        path: CSV file with the columns ``DateTime``, ``Junction`` and ``Vehicles``.
-        junction: Value of the ``Junction`` column to select.
+        path: CSV file with the counts of a single junction.
 
     Returns:
-        Vehicle counts indexed by hour and sorted by time.
+        Vehicle counts indexed by datetime and sorted by time.
 
     Raises:
-        ValueError: If columns are missing or the junction has no rows.
+        ValueError: If a column is missing.
     """
-    frame = pd.read_csv(path, parse_dates=["DateTime"])
-    missing = REQUIRED_COLUMNS - set(frame.columns)
+    frame = pd.read_csv(path)
+    missing = {DATETIME_COLUMN, VEHICLES_COLUMN} - set(frame.columns)
     if missing:
         raise ValueError(f"{path} is missing columns: {sorted(missing)}")
 
-    rows = frame[frame["Junction"] == junction]
-    if rows.empty:
-        raise ValueError(f"{path} has no rows for junction {junction}")
-
-    counts = rows.set_index("DateTime")["Vehicles"].sort_index()
-    counts.name = f"junction_{junction}"
-    return counts
+    counts = frame.set_index(pd.to_datetime(frame[DATETIME_COLUMN]))[VEHICLES_COLUMN]
+    return counts.sort_index()

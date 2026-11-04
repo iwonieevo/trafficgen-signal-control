@@ -22,6 +22,13 @@ The primary data source is the [Traffic Prediction Dataset](https://www.kaggle.c
 
 ### Installation
 
+Clone the repository:
+
+```bash
+git clone https://github.com/iwonieevo/trafficgen-signal-control.git
+cd trafficgen-signal-control
+```
+
 Install the project dependencies, including SUMO 1.28.0 (about 500 MB), into `.venv`:
 
 ```bash
@@ -49,6 +56,8 @@ uv run python scripts/run_sumo.py single-intersection --gui
 
 ### Generating Traffic
 
+The generator currently produces hourly vehicle counts per junction (layer 1). Turning these counts into road-level demand for SUMO (layer 2) is not implemented yet, see [issue #4](https://github.com/iwonieevo/trafficgen-signal-control/issues/4).
+
 Download the Kaggle dataset to `data/raw/kaggle_traffic.csv` and split it into one file per junction, `data/processed/kaggle_junction_<n>.csv` (no Kaggle account is needed):
 
 ```bash
@@ -60,6 +69,8 @@ Generate hourly vehicle counts for one junction. The start is included, the end 
 ```bash
 uv run python scripts/generate_traffic.py --junction J1 --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/j1.csv
 ```
+
+Use `--scale` to multiply the volume. Dates outside the data keep the traffic level of the nearest date in the data, because growth is not extrapolated.
 
 Junctions and their data files are defined in `configs/traffic.toml`. To use your own data, point a junction to a CSV file like this, with whole hours, no duplicate datetimes and at least one full week of consecutive hours:
 
@@ -81,7 +92,7 @@ counts = generators["J1"].sample("2017-04-03", "2017-04-10", seed=42)
 Two notebooks describe the data and the model. Open them with `uv run jupyter lab`:
 
 - `notebooks/kaggle_data_eda.ipynb`: exploratory analysis of the Kaggle dataset.
-- `notebooks/layer1_model_fit.ipynb`: how well the hourly count models fit the data. It does not cover road-level demand, since the raw data has no road information to test it against.
+- `notebooks/layer1_model_fit.ipynb`: how well the hourly count models (layer 1) fit the data. It does not cover road-level demand (layer 2), since the raw data has no road information to test it against.
 
 ### Development
 

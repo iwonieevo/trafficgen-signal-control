@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<routes>
+    <route id="r_0" edges="E0 E1"/>
+
+    <flow
+        id="flow_0"
+        route="r_0"
+        begin="0"
+        end="20"
+        period="2"
+    />
+</routes>

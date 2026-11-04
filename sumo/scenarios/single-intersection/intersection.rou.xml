@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<routes>
+    <!-- Straight-through vehicle routes -->
+    <route id="north_south" edges="-E0 E3"/>
+    <route id="south_north" edges="-E3 E0"/>
+    <route id="east_west" edges="-E1 E2"/>
+    <route id="west_east" edges="-E2 E1"/>
+
+    <!-- Vehicle flows -->
+    <flow id="n_s" route="north_south"
+          begin="0" end="600" vehsPerHour="300"/>
+
+    <flow id="s_n" route="south_north"
+          begin="0" end="600" vehsPerHour="300"/>
+
+    <flow id="e_w" route="east_west"
+          begin="0" end="600" vehsPerHour="240"/>
+
+    <flow id="w_e" route="west_east"
+          begin="0" end="600" vehsPerHour="240"/>
+</routes>

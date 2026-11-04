@@ -53,8 +53,10 @@ def find_executable(gui: bool) -> str:
     except ImportError:
         executable = shutil.which(name)
     else:
-        os.environ["SUMO_HOME"] = sumo.SUMO_HOME
-        executable = shutil.which(name, path=str(Path(sumo.SUMO_HOME) / "bin"))
+        # Without eclipse-sumo, pyright resolves this import to the sumo/ folder of the repository.
+        sumo_home = sumo.SUMO_HOME  # pyright: ignore[reportAttributeAccessIssue]
+        os.environ["SUMO_HOME"] = sumo_home
+        executable = shutil.which(name, path=str(Path(sumo_home) / "bin"))
 
     if executable is None:
         sys.exit(f"SUMO executable not found: {name}. Install it with: uv sync")

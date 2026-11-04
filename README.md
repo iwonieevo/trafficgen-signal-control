@@ -88,6 +88,7 @@ Run the same checks as CI before pushing:
 
 ```bash
 uv run ruff check .
+uv run pyright
 uv run pytest
 ```
 

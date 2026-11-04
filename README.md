@@ -48,6 +48,31 @@ Example:
 ./scripts/run-sumo.sh single-intersection gui
 ```
 
+### Generating Traffic
+
+Download the dataset into `data/raw/` (no Kaggle account is needed):
+
+```bash
+uv run python scripts/download_data.py
+```
+
+Generate hourly vehicle counts for one junction. The start is included, the end is excluded, and both must be whole hours:
+
+```bash
+uv run python scripts/generate_traffic.py --junction J1 --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/j1.csv
+```
+
+Junctions and their input data are defined in `configs/traffic.toml`. From Python:
+
+```python
+from trafficgen import build_generators, load_config
+
+generators = build_generators(load_config("configs/traffic.toml"))
+counts = generators["J1"].sample("2017-04-03", "2017-04-10", seed=42)
+```
+
+`notebooks/traffic_generation.ipynb` shows how the model is built and compares generated traffic with the real data. Open it with `uv run jupyter lab`.
+
 ### Development
 
 Add a dependency with `uv add <package>`, or `uv add --group <group> <package>` for a dependency group. Commit the updated `uv.lock`.
@@ -65,8 +90,11 @@ The repository is under active development.
 
 | Path | Description |
 |---|---|
+| `src/trafficgen/` | Traffic generator package |
+| `configs/` | Traffic generator configuration |
+| `notebooks/` | Model development and validation |
 | `sumo/scenarios/` | SUMO simulation scenarios |
-| `scripts/` | Utilities for running simulations |
+| `scripts/` | Utilities for downloading data, generating traffic and running simulations |
 | `tests/` | Automated tests |
 | `docs/images/` | Images used in project documentation |
 

@@ -1,0 +1,24 @@
+# Junctions of the Kaggle Traffic Prediction Dataset, modelled independently.
+# Relative data paths are resolved against the directory of this file.
+# US holidays are a modelling assumption: the dataset does not name its country.
+country = "US"
+
+[[junctions]]
+id = "J1"
+data = "../data/raw/traffic.csv"
+source_junction = 1
+
+[[junctions]]
+id = "J2"
+data = "../data/raw/traffic.csv"
+source_junction = 2
+
+[[junctions]]
+id = "J3"
+data = "../data/raw/traffic.csv"
+source_junction = 3
+
+[[junctions]]
+id = "J4"
+data = "../data/raw/traffic.csv"
+source_junction = 4

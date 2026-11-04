@@ -1,20 +1,61 @@
 # Python
-.venv/
 __pycache__/
 *.py[cod]
+*.egg-info/
+build/
+dist/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
 
-# Local configuration
+# Virtual environments
+.venv/
+venv/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Data (fetched with a script, never committed)
+/data/raw/
+/data/processed/
+
+# Trained models and checkpoints
+/models/
+/checkpoints/
+*.pt
+*.pth
+*.ckpt
+*.joblib
+*.pkl
+
+# Logs and training runs
+/logs/
+/runs/
+/wandb/
+*.log
+events.out.tfevents.*
+
+# Simulation and experiment outputs
+/results/
+/outputs/
+/plots/
+*.output.xml
+*.out.xml
+tripinfo*.xml
+summary*.xml
+emissions*.xml
+
+# Secrets and local configuration
 .env
-.env.local
+.env.*
+!.env.example
+kaggle.json
+
+# Editors and operating system files
 .vscode/
 .idea/
-
-# Simulation outputs
-/results/
-*.output.xml
-
-# Logs and operating system files
-*.log
+*.swp
 .DS_Store
+Thumbs.db
+.directory

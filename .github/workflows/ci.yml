@@ -5,12 +5,14 @@ on:
     branches: [main]
 
 jobs:
-  lint:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10.3.3
         with:
-          python-version: "3.11"
-      - run: pip install ruff
-      - run: ruff check .
+          enable-cache: true
+      # Only the dev group: SUMO and other heavy dependencies are not needed here.
+      - run: uv sync --locked --no-default-groups --group dev
+      - run: uv run --no-sync ruff check .
+      - run: uv run --no-sync pytest

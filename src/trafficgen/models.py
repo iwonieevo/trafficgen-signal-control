@@ -25,7 +25,7 @@ from typing import Self
 import numpy as np
 import pandas as pd
 
-HOURS_PER_WEEK = 168
+HOURS_PER_WEEK = 7 * 24
 TREND_WINDOW_HOURS = 4 * HOURS_PER_WEEK
 NOISE_BLOCK_HOURS = HOURS_PER_WEEK
 
@@ -35,7 +35,8 @@ TimeLike = str | datetime | pd.Timestamp
 def validate_counts(counts: pd.Series) -> pd.Series:
     """Check that a series holds usable hourly counts.
 
-    Gaps between hours are allowed.
+    Gaps between hours are allowed, as long as the data includes one full week: at least
+    168 consecutive hours. Such a week covers every combination of weekday and hour.
 
     Args:
         counts: Vehicle counts indexed by datetime.
@@ -44,8 +45,8 @@ def validate_counts(counts: pd.Series) -> pd.Series:
         The counts as floats, sorted by time.
 
     Raises:
-        ValueError: If the index or the values are not valid hourly counts, or if there
-            is less than one week of data.
+        ValueError: If the index or the values are not valid hourly counts, or if the data
+            has no full week.
     """
     if not isinstance(counts.index, pd.DatetimeIndex):
         raise ValueError("counts must be indexed by datetime")
@@ -57,9 +58,15 @@ def validate_counts(counts: pd.Series) -> pd.Series:
         raise ValueError("counts must be indexed by whole hours")
     if counts.isna().any() or (counts < 0).any():
         raise ValueError("counts must be non-negative numbers")
-    if len(counts) < HOURS_PER_WEEK:
-        raise ValueError(f"at least {HOURS_PER_WEEK} hours of data are required")
-    return counts.astype(float).sort_index()
+    counts = counts.astype(float).sort_index()
+    if not _has_full_week(counts.asfreq("h")):
+        raise ValueError(f"counts need a full week: {HOURS_PER_WEEK} consecutive hours")
+    return counts
+
+
+def _has_full_week(regular: pd.Series) -> bool:
+    """Tell whether a series on a regular hourly index has a week without gaps."""
+    return bool((regular.notna().rolling(HOURS_PER_WEEK).sum() == HOURS_PER_WEEK).any())
 
 
 def hourly_range(start: TimeLike, end: TimeLike) -> pd.DatetimeIndex:
@@ -92,27 +99,16 @@ def _weekday_hour_keys(index: pd.DatetimeIndex) -> pd.MultiIndex:
     return pd.MultiIndex.from_arrays([index.day_of_week, index.hour], names=["weekday", "hour"])
 
 
-def _complete_profile(values: pd.Series, index: pd.DatetimeIndex, fallback: float) -> pd.Series:
-    """Average values per weekday and hour, covering all 168 combinations.
+def _weekly_profile(values: pd.Series) -> pd.Series:
+    """Average values per weekday and hour.
 
     Args:
-        values: Values to average, aligned with ``index``.
-        index: Timestamps of the values.
-        fallback: Value for a combination that the hourly averages cannot fill either.
+        values: Values indexed by datetime.
 
     Returns:
-        Average value per (weekday, hour). A missing combination takes the average of
-        its hour, which matters for short histories.
+        Average value per (weekday, hour).
     """
-    frame = pd.DataFrame({"value": values.to_numpy()}, index=_weekday_hour_keys(index))
-    profile = frame.groupby(level=["weekday", "hour"])["value"].mean()
-    by_hour = frame.groupby(level="hour")["value"].mean()
-    keys = pd.MultiIndex.from_product([range(7), range(24)], names=["weekday", "hour"])
-    profile = profile.reindex(keys)
-    missing = profile.isna().to_numpy()
-    hours = keys.get_level_values("hour")[missing]
-    profile[missing] = by_hour.reindex(hours).fillna(fallback).to_numpy()
-    return profile
+    return values.groupby(_weekday_hour_keys(values.index)).mean()
 
 
 class HourlyCountModel(ABC):
@@ -172,7 +168,7 @@ class MeanProfileModel(HourlyCountModel):
             The fitted model.
         """
         counts = validate_counts(counts)
-        self.profile_ = _complete_profile(counts, counts.index, fallback=float(counts.mean()))
+        self.profile_ = _weekly_profile(counts)
         return self
 
     def sample(
@@ -234,7 +230,7 @@ class StatisticalCountModel(HourlyCountModel):
             The fitted model.
 
         Raises:
-            ValueError: If the counts are invalid or gaps leave no complete noise block.
+            ValueError: If the counts are invalid.
         """
         counts = validate_counts(counts)
         log_counts = np.log1p(counts).asfreq("h")
@@ -246,8 +242,7 @@ class StatisticalCountModel(HourlyCountModel):
         level = level.ffill().bfill()
         detrended = log_counts - level
 
-        observed = detrended.notna().to_numpy()
-        profile = _complete_profile(detrended[observed], index[observed], fallback=0.0)
+        profile = _weekly_profile(detrended.dropna())
         noise = detrended - profile.reindex(_weekday_hour_keys(index)).to_numpy()
         self._block_starts = self._find_block_starts(noise)
         self.level_ = level
@@ -264,15 +259,9 @@ class StatisticalCountModel(HourlyCountModel):
 
         Returns:
             Start positions of the usable blocks.
-
-        Raises:
-            ValueError: If gaps leave no complete block.
         """
         complete = noise.notna().rolling(NOISE_BLOCK_HOURS).sum() == NOISE_BLOCK_HOURS
-        starts = np.flatnonzero(complete.to_numpy()) - NOISE_BLOCK_HOURS + 1
-        if len(starts) == 0:
-            raise ValueError(f"counts need {NOISE_BLOCK_HOURS} consecutive hours without gaps")
-        return starts
+        return np.flatnonzero(complete.to_numpy()) - NOISE_BLOCK_HOURS + 1
 
     def sample(
         self, start: TimeLike, end: TimeLike, seed: int | None = None, scale: float = 1.0

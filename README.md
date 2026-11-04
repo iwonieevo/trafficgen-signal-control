@@ -62,7 +62,7 @@ Generate hourly vehicle counts for one junction. The start is included, the end 
 uv run python scripts/generate_traffic.py --junction J1 --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/j1.csv
 ```
 
-Junctions and their data files are defined in `configs/traffic.toml`. To use your own data, point a junction to a CSV file like this, with whole hours and no duplicate datetimes:
+Junctions and their data files are defined in `configs/traffic.toml`. To use your own data, point a junction to a CSV file like this, with whole hours, no duplicate datetimes and at least one full week of consecutive hours:
 
 ```text
 datetime,vehicles

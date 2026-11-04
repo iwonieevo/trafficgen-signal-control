@@ -12,7 +12,8 @@ def load_counts(path: str | Path) -> pd.Series:
     """Load the hourly counts of one junction.
 
     The file must have the columns ``datetime`` and ``vehicles``. Models check the rest
-    when fitting: whole hours, no duplicate datetimes and non-negative counts.
+    when fitting: whole hours, no duplicate datetimes, non-negative counts and at least one
+    full week of consecutive hours.
 
     Args:
         path: CSV file with the counts of a single junction.

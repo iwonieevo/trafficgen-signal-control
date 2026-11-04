@@ -19,6 +19,7 @@ venv/
 # Data (fetched with a script, never committed)
 /data/raw/
 /data/processed/
+/src/data/processed/
 
 # Trained models and checkpoints
 /models/

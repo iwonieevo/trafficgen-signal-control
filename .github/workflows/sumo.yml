@@ -7,6 +7,7 @@ on:
       - "pyproject.toml"
       - "scripts/run_sumo.py"
       - "sumo/**"
+      - "tests/test_sumo_simulation.py"
       - "uv.lock"
   push:
     branches: [main]
@@ -24,6 +25,5 @@ jobs:
       - uses: astral-sh/setup-uv@v10.3.3
         with:
           enable-cache: true
-      - run: uv sync --locked --no-default-groups --group sumo
-      - run: uv run --no-sync python scripts/run_sumo.py hello-world
-      - run: uv run --no-sync python scripts/run_sumo.py single-intersection
+      - run: uv sync --locked --no-default-groups --group dev --group sumo
+      - run: uv run --no-sync pytest -m sumo

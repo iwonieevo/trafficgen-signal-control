@@ -111,7 +111,7 @@ Workflows run on Ubuntu with the Python version from `.python-version`. To check
 gh workflow run all-platforms.yml --ref <branch>
 ```
 
-`pyproject.toml` also allows Python 3.12 and 3.13, since the dependencies resolve for them, but CI does not test them.
+The project is pinned to Python 3.14, the only version used in development and CI. `pyproject.toml` allows Python 3.12 and newer, so 3.12 should work in theory, but it is not tested.
 
 ## Project Structure
 

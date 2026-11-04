@@ -5,7 +5,6 @@ description = "Traffic generation and reinforcement learning based traffic signa
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "holidays>=0.108",
     "numpy>=2.5.4",
     "pandas>=3.1.1",
 ]

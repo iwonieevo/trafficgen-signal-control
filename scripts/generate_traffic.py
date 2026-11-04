@@ -31,7 +31,7 @@ def main() -> None:
         known = ", ".join(j.id for j in config.junctions)
         sys.exit(f"Unknown junction {args.junction!r}. Available: {known}")
 
-    subset = TrafficConfig(junctions=tuple(selected), country=config.country)
+    subset = TrafficConfig(junctions=tuple(selected))
     model = build_generators(subset)[args.junction]
     counts = model.sample(args.start, args.end, seed=args.seed, scale=args.scale)
     if args.output:

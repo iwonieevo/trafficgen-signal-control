@@ -12,19 +12,16 @@ Sources:
 
 - Hyndman and Athanasopoulos, "Forecasting: Principles and Practice", 3rd edition:
   log transformations and moving average trends (chapter 3,
-  https://otexts.com/fpp3/decomposition.html), dummy predictors for holidays (chapter 7,
-  https://otexts.com/fpp3/regression.html), bootstrapping the remainder of a
+  https://otexts.com/fpp3/decomposition.html), bootstrapping the remainder of a
   decomposition (chapter 13, https://otexts.com/fpp3/advanced.html).
 - Block bootstrap: https://en.wikipedia.org/wiki/Bootstrapping_(statistics)#Block_bootstrap
 - Poisson arrivals: https://en.wikipedia.org/wiki/Poisson_point_process
-- Holiday calendars: https://holidays.readthedocs.io/
 """
 
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Self
 
-import holidays
 import numpy as np
 import pandas as pd
 
@@ -88,22 +85,6 @@ def hourly_range(start: TimeLike, end: TimeLike) -> pd.DatetimeIndex:
     if stop <= first:
         raise ValueError(f"end must be after start: {first} to {stop}")
     return pd.date_range(first, stop, freq="h", inclusive="left")
-
-
-def holiday_mask(index: pd.DatetimeIndex, country: str | None) -> np.ndarray:
-    """Tell which hours fall on a public holiday.
-
-    Args:
-        index: Hours to check.
-        country: ISO country code of the holiday calendar, or ``None`` for no holidays.
-
-    Returns:
-        Boolean array with one value per hour.
-    """
-    if country is None:
-        return np.zeros(len(index), dtype=bool)
-    calendar = holidays.country_holidays(country, years=sorted(set(index.year)))
-    return np.fromiter((day.date() in calendar for day in index), dtype=bool, count=len(index))
 
 
 def _weekday_hour_keys(index: pd.DatetimeIndex) -> pd.MultiIndex:
@@ -172,7 +153,7 @@ class HourlyCountModel(ABC):
 class MeanProfileModel(HourlyCountModel):
     """Baseline model: the average count per weekday and hour, with Poisson noise.
 
-    It ignores growth over time, holidays and any dependence between consecutive hours.
+    It ignores growth over time and any dependence between consecutive hours.
     Poisson noise is the textbook assumption of independent vehicle arrivals at a
     constant rate within each hour (https://en.wikipedia.org/wiki/Poisson_point_process).
     """
@@ -207,19 +188,17 @@ class MeanProfileModel(HourlyCountModel):
 
 
 class StatisticalCountModel(HourlyCountModel):
-    """Decomposition of log counts into level, weekly profile, holidays and noise.
+    """Decomposition of log counts into level, weekly profile and noise.
 
     The model on the ``log(1 + count)`` scale is::
 
-        y[t] = level[t] + profile[weekday, hour] + holiday_effect * is_holiday[t] + noise[t]
+        y[t] = level[t] + profile[weekday, hour] + noise[t]
 
     Fitting uses these steps:
 
     1. ``level`` is a centered four week moving average, which removes the weekly cycle.
-    2. ``profile`` is the average of the detrended values per weekday and hour, on
-       non-holiday hours.
-    3. ``holiday_effect`` is the average remaining difference on holiday hours.
-    4. ``noise`` is what remains. It is kept as it is.
+    2. ``profile`` is the average of the detrended values per weekday and hour.
+    3. ``noise`` is what remains. It is kept as it is.
 
     Sampling draws random one week blocks of the fitted noise (a block bootstrap) and adds
     them to the deterministic part. Blocks keep the persistence of real noise, including
@@ -236,17 +215,12 @@ class StatisticalCountModel(HourlyCountModel):
     less than two years of data cannot separate seasonality from growth.
 
     See the module docstring for sources.
-
-    Args:
-        country: ISO country code of the holiday calendar, or ``None`` for no holidays.
     """
 
-    def __init__(self, country: str | None = "US") -> None:
+    def __init__(self) -> None:
         """Create an unfitted model."""
-        self.country = country
         self.level_: pd.Series | None = None
         self.profile_: pd.Series | None = None
-        self.holiday_effect_: float = 0.0
         self.noise_: pd.Series | None = None
         self._block_starts = np.array([], dtype=int)
 
@@ -272,19 +246,12 @@ class StatisticalCountModel(HourlyCountModel):
         level = level.ffill().bfill()
         detrended = log_counts - level
 
-        is_holiday = holiday_mask(index, self.country)
-        regular = detrended.notna().to_numpy() & ~is_holiday
-        profile = _complete_profile(detrended[regular], index[regular], fallback=0.0)
-        expected = profile.reindex(_weekday_hour_keys(index)).to_numpy()
-
-        holiday_gaps = (detrended - expected)[is_holiday].dropna()
-        holiday_effect = float(holiday_gaps.mean()) if len(holiday_gaps) else 0.0
-
-        noise = detrended - expected - holiday_effect * is_holiday
+        observed = detrended.notna().to_numpy()
+        profile = _complete_profile(detrended[observed], index[observed], fallback=0.0)
+        noise = detrended - profile.reindex(_weekday_hour_keys(index)).to_numpy()
         self._block_starts = self._find_block_starts(noise)
         self.level_ = level
         self.profile_ = profile
-        self.holiday_effect_ = holiday_effect
         self.noise_ = noise
         return self
 
@@ -318,7 +285,6 @@ class StatisticalCountModel(HourlyCountModel):
         mean = (
             combined.reindex(index).to_numpy()
             + self.profile_.reindex(_weekday_hour_keys(index)).to_numpy()
-            + self.holiday_effect_ * holiday_mask(index, self.country)
         )
         noise = self._sample_noise(len(index), np.random.default_rng(seed))
         values = np.rint(np.maximum(np.expm1(mean + noise), 0.0) * scale).astype(int)

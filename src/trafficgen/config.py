@@ -33,11 +33,9 @@ class TrafficConfig:
 
     Attributes:
         junctions: The junctions to generate traffic for.
-        country: ISO country code of the holiday calendar, or ``None`` for no holidays.
     """
 
     junctions: tuple[JunctionConfig, ...]
-    country: str | None = "US"
 
 
 def load_config(path: str | Path) -> TrafficConfig:
@@ -70,7 +68,7 @@ def load_config(path: str | Path) -> TrafficConfig:
         raise ValueError(f"{path} defines no junctions")
     if len(set(ids)) != len(ids):
         raise ValueError(f"{path} has duplicate junction ids: {ids}")
-    return TrafficConfig(junctions=junctions, country=raw.get("country", "US"))
+    return TrafficConfig(junctions=junctions)
 
 
 def build_generators(config: TrafficConfig) -> dict[str, HourlyCountModel]:
@@ -83,7 +81,7 @@ def build_generators(config: TrafficConfig) -> dict[str, HourlyCountModel]:
         Fitted models by junction id.
     """
     return {
-        junction.id: StatisticalCountModel(country=config.country).fit(
+        junction.id: StatisticalCountModel().fit(
             load_junction_counts(junction.data, junction.source_junction)
         )
         for junction in config.junctions

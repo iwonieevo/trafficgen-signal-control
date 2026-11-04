@@ -78,7 +78,10 @@ generators = build_generators(load_config("configs/traffic.toml"))
 counts = generators["J1"].sample("2017-04-03", "2017-04-10", seed=42)
 ```
 
-`notebooks/traffic_generation.ipynb` shows how the model is built and compares generated traffic with the real data. Open it with `uv run jupyter lab`.
+Two notebooks describe the data and the model. Open them with `uv run jupyter lab`:
+
+- `notebooks/kaggle_data_eda.ipynb`: exploratory analysis of the Kaggle dataset.
+- `notebooks/layer1_model_fit.ipynb`: how well the hourly count models fit the data. It does not cover road-level demand, since the raw data has no road information to test it against.
 
 ### Development
 
@@ -99,7 +102,7 @@ The repository is under active development.
 |---|---|
 | `src/trafficgen/` | Traffic generator package |
 | `configs/` | Traffic generator configuration |
-| `notebooks/` | Model development and validation |
+| `notebooks/` | Data analysis and model fit |
 | `sumo/scenarios/` | SUMO simulation scenarios |
 | `scripts/` | Utilities for downloading data, generating traffic and running simulations |
 | `tests/` | Automated tests |

@@ -29,5 +29,6 @@ def load_counts(path: str | Path) -> pd.Series:
     if missing:
         raise ValueError(f"{path} is missing columns: {sorted(missing)}")
 
-    counts = frame.set_index(pd.to_datetime(frame[DATETIME_COLUMN]))[VEHICLES_COLUMN]
+    index = pd.DatetimeIndex(frame[DATETIME_COLUMN], name=DATETIME_COLUMN)
+    counts = pd.Series(frame[VEHICLES_COLUMN].to_numpy(), index=index, name=VEHICLES_COLUMN)
     return counts.sort_index()

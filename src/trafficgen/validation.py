@@ -13,6 +13,8 @@ Sources:
   https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test
 """
 
+from typing import cast
+
 import numpy as np
 import pandas as pd
 
@@ -22,7 +24,7 @@ STATISTICS_LAGS = (1, 24, 168)
 
 
 def sample_many(
-    model: HourlyCountModel, index: pd.DatetimeIndex, runs: int, seed: int = 0
+    model: HourlyCountModel, index: pd.Index, runs: int, seed: int = 0
 ) -> pd.DataFrame:
     """Generate several independent series over the same hours.
 
@@ -35,8 +37,9 @@ def sample_many(
     Returns:
         DataFrame with one column per series.
     """
-    end = index[-1] + pd.Timedelta(hours=1)
-    series = [model.sample(index[0], end, seed=seed + run) for run in range(runs)]
+    start = cast(pd.Timestamp, index[0])
+    end = cast(pd.Timestamp, index[-1] + pd.Timedelta(hours=1))
+    series = [model.sample(start, end, seed=seed + run) for run in range(runs)]
     return pd.concat(series, axis=1, keys=range(runs)).reindex(index)
 
 
@@ -74,7 +77,7 @@ def statistics_table(real: pd.Series, samples: pd.DataFrame) -> pd.DataFrame:
         One row per statistic, with the real value, the mean generated value and the
         range covering 90% of the generated series.
     """
-    generated = pd.DataFrame([series_statistics(samples[run]) for run in samples])
+    generated = pd.DataFrame([series_statistics(column) for _, column in samples.items()])
     return pd.DataFrame(
         {
             "real": pd.Series(series_statistics(real)),
@@ -130,10 +133,9 @@ def profile_error(real: pd.Series, generated: pd.Series, keys: str = "weekly") -
     """
 
     def profile(counts: pd.Series) -> pd.Series:
-        groups = [counts.index.hour]
-        if keys == "weekly":
-            groups.insert(0, counts.index.day_of_week)
-        return counts.groupby(groups).mean()
+        index = pd.DatetimeIndex(counts.index)
+        groups = [index.day_of_week, index.hour] if keys == "weekly" else [index.hour]
+        return cast(pd.Series, counts.groupby(groups).mean())
 
     return float((profile(real) - profile(generated)).abs().mean() / real.mean())
 
@@ -165,7 +167,7 @@ def realism_scores(real: pd.Series, samples: pd.DataFrame) -> dict[str, float]:
         Distribution distances and profile errors averaged over the generated series,
         and the coverage of the 80% range.
     """
-    columns = [samples[run] for run in samples]
+    columns = [column for _, column in samples.items()]
     return {
         "wasserstein": float(np.mean([wasserstein_distance(real, c) for c in columns])),
         "ks": float(np.mean([ks_statistic(real, c) for c in columns])),

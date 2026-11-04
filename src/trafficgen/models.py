@@ -20,14 +20,12 @@ Sources:
 
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Self
+from typing import Self, cast
 
 import numpy as np
 import pandas as pd
 
 HOURS_PER_WEEK = 7 * 24
-TREND_WINDOW_HOURS = 4 * HOURS_PER_WEEK
-NOISE_BLOCK_HOURS = HOURS_PER_WEEK
 
 TimeLike = str | datetime | pd.Timestamp
 
@@ -59,14 +57,9 @@ def validate_counts(counts: pd.Series) -> pd.Series:
     if counts.isna().any() or (counts < 0).any():
         raise ValueError("counts must be non-negative numbers")
     counts = counts.astype(float).sort_index()
-    if not _has_full_week(counts.asfreq("h")):
+    if len(_gap_free_starts(counts.asfreq("h"), HOURS_PER_WEEK)) == 0:
         raise ValueError(f"counts need a full week: {HOURS_PER_WEEK} consecutive hours")
     return counts
-
-
-def _has_full_week(regular: pd.Series) -> bool:
-    """Tell whether a series on a regular hourly index has a week without gaps."""
-    return bool((regular.notna().rolling(HOURS_PER_WEEK).sum() == HOURS_PER_WEEK).any())
 
 
 def hourly_range(start: TimeLike, end: TimeLike) -> pd.DatetimeIndex:
@@ -94,6 +87,23 @@ def hourly_range(start: TimeLike, end: TimeLike) -> pd.DatetimeIndex:
     return pd.date_range(first, stop, freq="h", inclusive="left")
 
 
+def _gap_free_starts(values: pd.Series, hours: int) -> np.ndarray:
+    """Find where a window of consecutive hours has no gaps.
+
+    Args:
+        values: Hourly values on a regular index, with NaN in gaps.
+        hours: Length of the window.
+
+    Returns:
+        Positions where such a window can start.
+    """
+    present = values.notna().to_numpy()
+    if len(present) < hours:
+        return np.array([], dtype=int)
+    windows = np.lib.stride_tricks.sliding_window_view(present, hours)
+    return np.flatnonzero(windows.all(axis=1))
+
+
 def _weekday_hour_keys(index: pd.DatetimeIndex) -> pd.MultiIndex:
     """Return the (weekday, hour) key of each timestamp."""
     return pd.MultiIndex.from_arrays([index.day_of_week, index.hour], names=["weekday", "hour"])
@@ -108,7 +118,8 @@ def _weekly_profile(values: pd.Series) -> pd.Series:
     Returns:
         Average value per (weekday, hour).
     """
-    return values.groupby(_weekday_hour_keys(values.index)).mean()
+    keys = _weekday_hour_keys(pd.DatetimeIndex(values.index))
+    return cast(pd.Series, values.groupby(keys).mean())
 
 
 class HourlyCountModel(ABC):
@@ -211,14 +222,22 @@ class StatisticalCountModel(HourlyCountModel):
     less than two years of data cannot separate seasonality from growth.
 
     See the module docstring for sources.
+
+    Attributes:
+        TREND_WINDOW_HOURS: Length of the moving average behind the level. Whole weeks make
+            the weekly cycle cancel out.
+        NOISE_BLOCK_HOURS: Length of the noise blocks drawn when sampling.
     """
+
+    TREND_WINDOW_HOURS = 4 * HOURS_PER_WEEK
+    NOISE_BLOCK_HOURS = HOURS_PER_WEEK
 
     def __init__(self) -> None:
         """Create an unfitted model."""
         self.level_: pd.Series | None = None
         self.profile_: pd.Series | None = None
         self.noise_: pd.Series | None = None
-        self._block_starts = np.array([], dtype=int)
+        self.block_starts_: np.ndarray | None = None
 
     def fit(self, counts: pd.Series) -> Self:
         """Fit the model on the historical counts of one junction.
@@ -233,41 +252,34 @@ class StatisticalCountModel(HourlyCountModel):
             ValueError: If the counts are invalid.
         """
         counts = validate_counts(counts)
-        log_counts = np.log1p(counts).asfreq("h")
-        index = log_counts.index
+        log_counts = pd.Series(np.log1p(counts.to_numpy()), index=counts.index).asfreq("h")
+        index = pd.DatetimeIndex(log_counts.index)
 
-        level = log_counts.rolling(
-            TREND_WINDOW_HOURS, center=True, min_periods=HOURS_PER_WEEK
+        rolling_mean = log_counts.rolling(
+            self.TREND_WINDOW_HOURS, center=True, min_periods=HOURS_PER_WEEK
         ).mean()
-        level = level.ffill().bfill()
+        level = cast(pd.Series, rolling_mean).ffill().bfill()
         detrended = log_counts - level
 
         profile = _weekly_profile(detrended.dropna())
         noise = detrended - profile.reindex(_weekday_hour_keys(index)).to_numpy()
-        self._block_starts = self._find_block_starts(noise)
+
         self.level_ = level
         self.profile_ = profile
         self.noise_ = noise
+        self.block_starts_ = _gap_free_starts(noise, self.NOISE_BLOCK_HOURS)
         return self
-
-    @staticmethod
-    def _find_block_starts(noise: pd.Series) -> np.ndarray:
-        """Find the positions where a noise block has no gaps.
-
-        Args:
-            noise: Hourly noise on a regular index, with NaN in gaps.
-
-        Returns:
-            Start positions of the usable blocks.
-        """
-        complete = noise.notna().rolling(NOISE_BLOCK_HOURS).sum() == NOISE_BLOCK_HOURS
-        return np.flatnonzero(complete.to_numpy()) - NOISE_BLOCK_HOURS + 1
 
     def sample(
         self, start: TimeLike, end: TimeLike, seed: int | None = None, scale: float = 1.0
     ) -> pd.Series:
         """Generate hourly counts for a time range. See ``HourlyCountModel.sample``."""
-        if self.level_ is None:
+        if (
+            self.level_ is None
+            or self.profile_ is None
+            or self.noise_ is None
+            or self.block_starts_ is None
+        ):
             raise RuntimeError("fit the model before sampling")
         index = hourly_range(start, end)
         combined = self.level_.reindex(self.level_.index.union(index)).ffill().bfill()
@@ -275,22 +287,14 @@ class StatisticalCountModel(HourlyCountModel):
             combined.reindex(index).to_numpy()
             + self.profile_.reindex(_weekday_hour_keys(index)).to_numpy()
         )
-        noise = self._sample_noise(len(index), np.random.default_rng(seed))
+
+        # Join random blocks of the fitted noise until the whole range is covered.
+        block_hours = self.NOISE_BLOCK_HOURS
+        block_count = int(np.ceil(len(index) / block_hours))
+        starts = np.random.default_rng(seed).choice(self.block_starts_, size=block_count)
+        fitted_noise = self.noise_.to_numpy()
+        blocks = [fitted_noise[first : first + block_hours] for first in starts]
+        noise = np.concatenate(blocks)[: len(index)]
+
         values = np.rint(np.maximum(np.expm1(mean + noise), 0.0) * scale).astype(int)
         return pd.Series(values, index=index, name="vehicles")
-
-    def _sample_noise(self, length: int, rng: np.random.Generator) -> np.ndarray:
-        """Draw consecutive random blocks of the fitted noise.
-
-        Args:
-            length: Number of hours to return.
-            rng: Random generator.
-
-        Returns:
-            Noise values for the requested hours.
-        """
-        block_count = int(np.ceil(length / NOISE_BLOCK_HOURS))
-        starts = rng.choice(self._block_starts, size=block_count)
-        noise = self.noise_.to_numpy()
-        blocks = [noise[first : first + NOISE_BLOCK_HOURS] for first in starts]
-        return np.concatenate(blocks)[:length]

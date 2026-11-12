@@ -13,7 +13,7 @@ Sources:
 - Hyndman and Athanasopoulos, "Forecasting: Principles and Practice", 3rd edition:
   log transformations and moving average trends (chapter 3,
   https://otexts.com/fpp3/decomposition.html), bootstrapping the remainder of a
-  decomposition (chapter 13, https://otexts.com/fpp3/advanced.html).
+  decomposition (section 12.5, https://otexts.com/fpp3/advanced.html).
 - Block bootstrap: https://en.wikipedia.org/wiki/Bootstrapping_(statistics)#Block_bootstrap
 - Poisson arrivals: https://en.wikipedia.org/wiki/Poisson_point_process
 """

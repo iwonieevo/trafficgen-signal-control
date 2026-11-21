@@ -18,7 +18,7 @@ from typing import cast
 import numpy as np
 import pandas as pd
 
-from trafficgen.models import HourlyCountModel
+from trafficgen.models.hourly_counts import HourlyCountModel
 
 STATISTICS_LAGS = (1, 24, 168)
 

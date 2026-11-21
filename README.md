@@ -56,7 +56,7 @@ uv run python scripts/run_sumo.py single-intersection --gui
 
 ### Generating Traffic
 
-The generator currently produces hourly vehicle counts per junction (layer 1). Turning these counts into road-level demand for SUMO (layer 2) is not implemented yet, see [issue #4](https://github.com/iwonieevo/trafficgen-signal-control/issues/4).
+The generator produces hourly vehicle counts per junction (layer 1) and turns them into flows on every road and turn of a configured network (layer 2). Layer 2 is described in [docs/layer2.md](docs/layer2.md).
 
 Download the Kaggle dataset to `data/raw/kaggle_traffic.csv` and split it into one file per junction, `data/processed/kaggle_junction_<n>.csv` (no Kaggle account is needed):
 

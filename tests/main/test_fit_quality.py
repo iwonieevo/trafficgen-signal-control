@@ -5,7 +5,7 @@ import pandas as pd
 import pytest
 
 from trafficgen import MeanProfileModel
-from trafficgen.validation import (
+from trafficgen.fit_quality import (
     interval_coverage,
     ks_statistic,
     profile_error,

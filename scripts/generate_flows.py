@@ -19,8 +19,6 @@ from trafficgen import (
     load_network_config,
 )
 
-DEFAULT_CONFIG = Path(__file__).resolve().parent.parent / "configs" / "grid_2x2.toml"
-
 
 def parse_args() -> argparse.Namespace:
     """Parse the command line arguments.
@@ -29,7 +27,7 @@ def parse_args() -> argparse.Namespace:
         The parsed arguments.
     """
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="TOML config file")
+    parser.add_argument("--config", type=Path, required=True, help="TOML config file")
     parser.add_argument(
         "--counts", type=Path, required=True, help="CSV file with the counts of every junction"
     )

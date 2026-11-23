@@ -206,3 +206,10 @@ def test_generate_flows_rejects_an_invalid_config(
     )
     with pytest.raises(SystemExit, match="preference must not be negative"):
         generate_flows(monkeypatch, load_script, config_path, counts_path, tmp_path / "out")
+
+
+@pytest.mark.parametrize("name", ["generate_counts", "generate_flows"])
+def test_scripts_require_a_config(monkeypatch, load_script, capsys, name):
+    with pytest.raises(SystemExit):
+        run_script(monkeypatch, load_script, name, "--start", "2024-03-04T00:00")
+    assert "the following arguments are required: --config" in capsys.readouterr().err

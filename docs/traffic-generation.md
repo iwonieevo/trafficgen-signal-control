@@ -20,13 +20,13 @@ Download the Kaggle data first, as described in the README. Then, from the repos
 
 ```bash
 # Hourly counts of every junction of the config, for one week.
-uv run python scripts/generate_counts.py --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
+uv run python scripts/generate_counts.py --config configs/grid_2x2.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
 
 # Flows on every road and turn of the network for those counts.
-uv run python scripts/generate_flows.py --counts outputs/counts.csv --output-dir outputs/flows
+uv run python scripts/generate_flows.py --config configs/grid_2x2.toml --counts outputs/counts.csv --output-dir outputs/flows
 ```
 
-Both scripts use `configs/grid_2x2.toml` unless `--config` is given. `outputs/` is ignored by git. Each script, its options and its output are described in the doc of its part.
+Both scripts need `--config`; here both use the 2x2 grid. `outputs/` is ignored by git. Each script, its options and its output are described in the doc of its part.
 
 From Python:
 

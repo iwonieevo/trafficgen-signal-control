@@ -83,12 +83,12 @@ Preferences are relative: 0.15/0.7/0.15 and 3/14/3 give the same shares. Invalid
 ## Running
 
 ```bash
-uv run python scripts/generate_flows.py --counts outputs/counts.csv --output-dir outputs/flows
+uv run python scripts/generate_flows.py --config configs/grid_2x2.toml --counts outputs/counts.csv --output-dir outputs/flows
 ```
 
 | Option | Meaning |
 |---|---|
-| `--config` | Config file, default `configs/grid_2x2.toml` |
+| `--config` | Config file, required |
 | `--counts` | CSV file with a `datetime` column and one column per junction id, as written by `scripts/generate_counts.py`. Other columns are ignored |
 | `--output-dir` | Directory for the five CSV files |
 

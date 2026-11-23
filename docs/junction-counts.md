@@ -53,12 +53,12 @@ The junction counts read `[[junctions]]` and `[counts]` of the [shared config](t
 ## Running
 
 ```bash
-uv run python scripts/generate_counts.py --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
+uv run python scripts/generate_counts.py --config configs/grid_2x2.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
 ```
 
 | Option | Meaning |
 |---|---|
-| `--config` | Config file, default `configs/grid_2x2.toml` |
+| `--config` | Config file, required |
 | `--start`, `--end` | First hour and the hour after the last one. Both must be whole hours |
 | `--junction` | Junction to write, repeat for several. Default: all |
 | `--seed` | Seed for reproducible output. Without it, every run differs |

@@ -47,8 +47,8 @@ uv run python scripts/run_sumo.py single-intersection --gui
 Generate a week of hourly counts for the junctions of the 2x2 grid, then the flows on every road and turn of the grid:
 
 ```bash
-uv run python scripts/generate_counts.py --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
-uv run python scripts/generate_flows.py --counts outputs/counts.csv --output-dir outputs/flows
+uv run python scripts/generate_counts.py --config configs/grid_2x2.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
+uv run python scripts/generate_flows.py --config configs/grid_2x2.toml --counts outputs/counts.csv --output-dir outputs/flows
 ```
 
 ## Documentation

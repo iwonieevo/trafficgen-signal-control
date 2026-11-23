@@ -5,7 +5,8 @@ import pandas as pd
 import pytest
 
 from trafficgen import MeanProfileModel, StatisticalCountModel
-from trafficgen.models.hourly_counts import hourly_range, validate_counts
+from trafficgen.counts.models import validate_counts
+from trafficgen.timeutils import hourly_range
 
 MODELS = [MeanProfileModel, StatisticalCountModel]
 START, END = "2024-03-04", "2024-03-18"

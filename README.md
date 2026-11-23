@@ -54,6 +54,8 @@ Example:
 uv run python scripts/run_sumo.py single-intersection --gui
 ```
 
+The scenarios and how to add one are described in [docs/sumo.md](docs/sumo.md).
+
 ### Generating Traffic
 
 The generator produces hourly vehicle counts per junction (layer 1) and turns them into flows on every road and turn of a configured network (layer 2). Layer 2 is described in [docs/layer2.md](docs/layer2.md).
@@ -136,27 +138,7 @@ The repository is under active development.
 | `sumo/scenarios/` | SUMO simulation scenarios |
 | `scripts/` | Utilities for downloading data, generating traffic and running simulations |
 | `tests/` | Automated tests, grouped by what they need |
-| `docs/images/` | Images used in project documentation |
-
-## Available Scenarios
-
-### Hello World
-
-A minimal road network demonstrating basic vehicle movement in SUMO.
-
-Based on the [official SUMO Hello World tutorial](https://sumo.dlr.de/docs/Tutorials/Hello_World.html).
-
-### Single Intersection
-
-A four-way signalized intersection with bidirectional roads and one lane per direction.
-
-The initial scenario uses fixed-time traffic light control and straight-through traffic flows only.
-
-Traffic demand consists of 180 vehicles generated over 600 seconds.
-
-Turning movements and additional traffic scenarios may be introduced later.
-
-![Single intersection in SUMO-GUI](docs/images/single-intersection.png)
+| `docs/` | Documentation of the project parts |
 
 ## References
 

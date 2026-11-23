@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<routes>
+    <!-- Placeholder demand: a few flows through the grid, straight and with turns.
+         SUMO finds the route of each flow between its from and to edges. -->
+    <flow id="west_east_bottom" from="left0A0" to="B0right0" begin="0" end="600" vehsPerHour="300"/>
+    <flow id="east_west_top" from="right1B1" to="A1left1" begin="0" end="600" vehsPerHour="300"/>
+    <flow id="south_north_left" from="bottom0A0" to="A1top0" begin="0" end="600" vehsPerHour="240"/>
+    <flow id="north_south_right" from="top1B1" to="B0bottom1" begin="0" end="600" vehsPerHour="240"/>
+    <flow id="west_north_turn" from="left1A1" to="B1top1" begin="0" end="600" vehsPerHour="120"/>
+    <flow id="south_east_turn" from="bottom1B0" to="B1right1" begin="0" end="600" vehsPerHour="120"/>
+</routes>

@@ -48,3 +48,7 @@ uv run netgenerate --grid --grid.number 2 --grid.length 300 --grid.attach-length
 ```
 
 Junction ids are `A0`, `A1`, `B0` and `B1` (column letter, row number from the bottom), and the outer nodes are `left0`, `top1` and so on. Edge ids join the ids of their start and end node, for example `A0B0`.
+
+## Traffic generator configs
+
+Each scenario that the traffic generator can feed has a config of the same name in `configs/`, generated from its network, so that road ids are the edge ids of the scenario. See [traffic-generation.md](traffic-generation.md#config).

@@ -1,7 +1,8 @@
-"""Layer 1 of the traffic generator: models of hourly vehicle counts per junction.
+"""Models of the hourly vehicle counts of one junction.
 
 Each model is fitted on the counts of a single junction and then samples new hourly
 counts for any time range. Models know nothing about roads, lanes or other junctions.
+``trafficgen.counts.sampling`` samples several junctions together.
 
 Two models are available:
 
@@ -19,15 +20,12 @@ Sources:
 """
 
 from abc import ABC, abstractmethod
-from datetime import datetime
 from typing import Self, cast
 
 import numpy as np
 import pandas as pd
 
-HOURS_PER_WEEK = 7 * 24
-
-TimeLike = str | datetime | pd.Timestamp
+from trafficgen.timeutils import HOURS_PER_WEEK, TimeLike, hourly_range
 
 
 def validate_counts(counts: pd.Series) -> pd.Series:
@@ -60,31 +58,6 @@ def validate_counts(counts: pd.Series) -> pd.Series:
     if len(_gap_free_starts(counts.asfreq("h"), HOURS_PER_WEEK)) == 0:
         raise ValueError(f"counts need a full week: {HOURS_PER_WEEK} consecutive hours")
     return counts
-
-
-def hourly_range(start: TimeLike, end: TimeLike) -> pd.DatetimeIndex:
-    """Build the hours of a time range, including ``start`` and excluding ``end``.
-
-    Args:
-        start: First hour of the range.
-        end: Hour right after the last hour of the range.
-
-    Returns:
-        One timestamp per hour.
-
-    Raises:
-        ValueError: If a bound is not a whole hour or is timezone-aware, or if ``end``
-            is not after ``start``.
-    """
-    first, stop = pd.Timestamp(start), pd.Timestamp(end)
-    for bound in (first, stop):
-        if bound.tz is not None:
-            raise ValueError(f"expected a naive datetime: {bound}")
-        if bound != bound.floor("h"):
-            raise ValueError(f"expected a whole hour: {bound}")
-    if stop <= first:
-        raise ValueError(f"end must be after start: {first} to {stop}")
-    return pd.date_range(first, stop, freq="h", inclusive="left")
 
 
 def _gap_free_starts(values: pd.Series, hours: int) -> np.ndarray:
@@ -271,10 +244,37 @@ class StatisticalCountModel(HourlyCountModel):
         self.block_starts_ = _gap_free_starts(noise, self.NOISE_BLOCK_HOURS)
         return self
 
+    @property
+    def noise_week_starts(self) -> pd.DatetimeIndex:
+        """First hours of the one week noise blocks that sampling can draw."""
+        if self.noise_ is None or self.block_starts_ is None:
+            raise RuntimeError("fit the model before sampling")
+        return pd.DatetimeIndex(self.noise_.index[self.block_starts_])
+
     def sample(
-        self, start: TimeLike, end: TimeLike, seed: int | None = None, scale: float = 1.0
+        self,
+        start: TimeLike,
+        end: TimeLike,
+        seed: int | None = None,
+        scale: float = 1.0,
+        noise_weeks: pd.DatetimeIndex | None = None,
     ) -> pd.Series:
-        """Generate hourly counts for a time range. See ``HourlyCountModel.sample``."""
+        """Generate hourly counts for a time range. See ``HourlyCountModel.sample``.
+
+        Args:
+            start: First generated hour.
+            end: Hour right after the last generated hour.
+            seed: Seed of the random generator.
+            scale: Multiplier of the generated volume.
+            noise_weeks: First hours of the noise blocks to use, one per started week of
+                the range. Several junctions sampled with the same weeks keep the
+                correlation of their real noise. A week that this junction cannot use,
+                for example because its data does not cover it, is replaced by a random
+                one. Without it, every block is random.
+
+        Returns:
+            Integer vehicle counts indexed by hour.
+        """
         if (
             self.level_ is None
             or self.profile_ is None
@@ -293,9 +293,34 @@ class StatisticalCountModel(HourlyCountModel):
         block_hours = self.NOISE_BLOCK_HOURS
         block_count = int(np.ceil(len(index) / block_hours))
         starts = np.random.default_rng(seed).choice(self.block_starts_, size=block_count)
+        if noise_weeks is not None:
+            starts = self._use_shared_weeks(starts, noise_weeks)
         fitted_noise = self.noise_.to_numpy()
         blocks = [fitted_noise[first : first + block_hours] for first in starts]
         noise = np.concatenate(blocks)[: len(index)]
 
         values = np.rint(np.maximum(np.expm1(mean + noise), 0.0) * scale).astype(int)
         return pd.Series(values, index=index, name="vehicles")
+
+    def _use_shared_weeks(
+        self, random_starts: np.ndarray, noise_weeks: pd.DatetimeIndex
+    ) -> np.ndarray:
+        """Replace random block starts with the shared weeks that this junction can use.
+
+        Args:
+            random_starts: Positions of randomly drawn blocks, one per block.
+            noise_weeks: First hours of the shared blocks.
+
+        Returns:
+            Block start positions: the shared week where possible, the random one otherwise.
+
+        Raises:
+            ValueError: If there are fewer shared weeks than blocks.
+        """
+        assert self.noise_ is not None and self.block_starts_ is not None
+        block_count = len(random_starts)
+        if len(noise_weeks) < block_count:
+            raise ValueError(f"expected {block_count} noise weeks, got {len(noise_weeks)}")
+        positions = self.noise_.index.get_indexer(noise_weeks[:block_count])
+        usable = np.isin(positions, self.block_starts_)
+        return np.where(usable, positions, random_starts)

@@ -1,14 +1,14 @@
 """Tests of the command line scripts, without network access."""
 
-import re
 import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import pytest
 
-from trafficgen import load_counts
+from trafficgen import load_counts, load_junction_counts
 
 
 def test_split_junctions_writes_one_file_per_junction(tmp_path, monkeypatch, load_script):
@@ -35,61 +35,87 @@ def test_split_junctions_writes_one_file_per_junction(tmp_path, monkeypatch, loa
 
 @pytest.fixture
 def config_path(tmp_path, hourly_counts):
-    """Write a config file with one junction and its data."""
+    """Copy the grid config, with every junction using the same synthetic data."""
     hourly_counts.to_csv(tmp_path / "data.csv")
+    grid_config = Path(__file__).parents[2] / "configs" / "grid_2x2.toml"
+    text = grid_config.read_text()
+    for number in range(1, 5):
+        text = text.replace(f"../data/processed/kaggle_junction_{number}.csv", "data.csv")
     path = tmp_path / "config.toml"
-    path.write_text('[[junctions]]\nid = "A"\ndata = "data.csv"\n')
+    path.write_text(text)
     return path
 
 
-def run_generate(script, monkeypatch, config_path, *arguments):
-    """Run the generation script with a fixed time range and the given arguments."""
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "generate_traffic.py",
-            "--config",
-            str(config_path),
-            "--start",
-            "2024-03-04T00:00",
-            "--end",
-            "2024-03-04T03:00",
-            *arguments,
-        ],
+def run_script(monkeypatch, load_script, name, *arguments):
+    """Run the main function of a script with the given arguments."""
+    monkeypatch.setattr(sys, "argv", [f"{name}.py", *arguments])
+    load_script(name).main()
+
+
+def generate_counts(monkeypatch, load_script, config_path, *arguments):
+    """Run scripts/generate_counts.py for three hours with the given arguments."""
+    run_script(
+        monkeypatch,
+        load_script,
+        "generate_counts",
+        "--config",
+        str(config_path),
+        "--start",
+        "2024-03-04T00:00",
+        "--end",
+        "2024-03-04T03:00",
+        *arguments,
     )
-    script.main()
 
 
-def test_generate_writes_csv_to_a_new_directory(tmp_path, monkeypatch, load_script, config_path):
+def test_generate_counts_writes_every_junction_to_a_new_directory(
+    tmp_path, monkeypatch, load_script, config_path
+):
     output = tmp_path / "new" / "directory" / "counts.csv"
-    script = load_script("generate_traffic")
-    run_generate(
-        script, monkeypatch, config_path, "--junction", "A", "--seed", "1", "--output", str(output)
-    )
+    generate_counts(monkeypatch, load_script, config_path, "--seed", "1", "--output", str(output))
 
-    assert len(load_counts(output)) == 3
+    counts = load_junction_counts(output)
+    assert list(counts.columns) == ["J1", "J2", "J3", "J4"]
+    assert len(counts) == 3
 
 
-def test_generate_prints_to_stdout_by_default(monkeypatch, load_script, config_path, capsys):
-    script = load_script("generate_traffic")
-    run_generate(script, monkeypatch, config_path, "--junction", "A", "--seed", "1")
+def test_generate_counts_prints_to_stdout_by_default(monkeypatch, load_script, config_path, capsys):
+    generate_counts(monkeypatch, load_script, config_path, "--junction", "J2", "--seed", "1")
 
     lines = capsys.readouterr().out.splitlines()
-    assert lines[0] == "datetime,vehicles"
+    assert lines[0] == "datetime,J2"
     assert pd.Timestamp(lines[1].split(",")[0]) == pd.Timestamp("2024-03-04 00:00")
 
 
-def test_generate_stdout_has_clean_line_endings_when_redirected(config_path):
-    script = Path(__file__).parents[2] / "scripts" / "generate_traffic.py"
+def test_selected_junctions_match_the_full_output(tmp_path, monkeypatch, load_script, config_path):
+    generate_counts(
+        monkeypatch, load_script, config_path, "--seed", "4", "--output", str(tmp_path / "all.csv")
+    )
+    generate_counts(
+        monkeypatch,
+        load_script,
+        config_path,
+        "--seed",
+        "4",
+        "--junction",
+        "J3",
+        "--output",
+        str(tmp_path / "j3.csv"),
+    )
+    pd.testing.assert_frame_equal(
+        load_junction_counts(tmp_path / "j3.csv"),
+        load_junction_counts(tmp_path / "all.csv")[["J3"]],
+    )
+
+
+def test_generate_counts_stdout_has_clean_line_endings_when_redirected(config_path):
+    script = Path(__file__).parents[2] / "scripts" / "generate_counts.py"
     result = subprocess.run(
         [
             sys.executable,
             str(script),
             "--config",
             str(config_path),
-            "--junction",
-            "A",
             "--start",
             "2024-03-04T00:00",
             "--end",
@@ -102,50 +128,44 @@ def test_generate_stdout_has_clean_line_endings_when_redirected(config_path):
     assert len(result.stdout.splitlines()) == 4
 
 
-def test_generate_rejects_an_unknown_junction(monkeypatch, load_script, config_path):
-    script = load_script("generate_traffic")
-    with pytest.raises(SystemExit, match="Unknown junction 'B'. Available: A"):
-        run_generate(script, monkeypatch, config_path, "--junction", "B")
+def test_generate_counts_rejects_an_unknown_junction(monkeypatch, load_script, config_path):
+    with pytest.raises(SystemExit, match="Unknown junction 'X'. Available: J1, J2, J3, J4"):
+        generate_counts(monkeypatch, load_script, config_path, "--junction", "X")
 
 
 @pytest.fixture
-def network_config_path(tmp_path, hourly_counts):
-    hourly_counts.to_csv(tmp_path / "data.csv")
-    grid_config = Path(__file__).parents[2] / "configs" / "network_grid_2x2.toml"
-    path = tmp_path / "network.toml"
-    path.write_text(
-        re.sub(r"\.\./data/processed/kaggle_junction_\d\.csv", "data.csv", grid_config.read_text())
+def counts_path(tmp_path):
+    """Write a day of counts for the four junctions of the grid."""
+    rng = np.random.default_rng(0)
+    index = pd.date_range("2024-03-04", periods=24, freq="h", name="datetime")
+    counts = pd.DataFrame(
+        rng.integers(0, 100, size=(24, 4)), index=index, columns=["J1", "J2", "J3", "J4"]
     )
+    path = tmp_path / "counts.csv"
+    counts.to_csv(path)
     return path
 
 
-def run_generate_road_demand(monkeypatch, load_script, config_path, output_dir, *arguments):
-    monkeypatch.setattr(
-        sys,
-        "argv",
-        [
-            "generate_road_demand.py",
-            "--config",
-            str(config_path),
-            "--start",
-            "2024-03-04T00:00",
-            "--end",
-            "2024-03-05T00:00",
-            "--output-dir",
-            str(output_dir),
-            *arguments,
-        ],
+def generate_flows(monkeypatch, load_script, config_path, counts_path, output_dir):
+    """Run scripts/generate_flows.py."""
+    run_script(
+        monkeypatch,
+        load_script,
+        "generate_flows",
+        "--config",
+        str(config_path),
+        "--counts",
+        str(counts_path),
+        "--output-dir",
+        str(output_dir),
     )
-    load_script("generate_road_demand").main()
 
 
-def test_generate_road_demand_writes_every_output_table(
-    tmp_path, monkeypatch, load_script, network_config_path, capsys
+def test_generate_flows_writes_every_output_table(
+    tmp_path, monkeypatch, load_script, config_path, counts_path, capsys
 ):
     output_dir = tmp_path / "new" / "output"
-    run_generate_road_demand(
-        monkeypatch, load_script, network_config_path, output_dir, "--seed", "1"
-    )
+    generate_flows(monkeypatch, load_script, config_path, counts_path, output_dir)
 
     assert sorted(path.name for path in output_dir.iterdir()) == [
         "entry_flows.csv",
@@ -154,55 +174,35 @@ def test_generate_road_demand_writes_every_output_table(
         "roads.csv",
         "turn_flows.csv",
     ]
-    road_flows = pd.read_csv(output_dir / "road_flows.csv")
-    assert list(road_flows.columns) == [
-        "datetime",
-        "road",
-        "from_junction",
-        "to_junction",
-        "kind",
-        "vehicles_per_hour",
-    ]
-    assert len(set(road_flows["datetime"])) == 24
-    assert (road_flows["vehicles_per_hour"].to_numpy() >= 0).all()
+    balance = pd.read_csv(output_dir / "junction_balance.csv")
+    assert balance["datetime"].nunique() == 24
+    assert balance["difference"].abs().max() < 1e-6
     assert "wrote" in capsys.readouterr().out
 
 
-def test_generate_road_demand_is_reproducible_with_a_seed(
-    tmp_path, monkeypatch, load_script, network_config_path
+def test_generate_flows_is_deterministic(
+    tmp_path, monkeypatch, load_script, config_path, counts_path
 ):
     for run in ("first", "second"):
-        run_generate_road_demand(
-            monkeypatch, load_script, network_config_path, tmp_path / run, "--seed", "7"
-        )
+        generate_flows(monkeypatch, load_script, config_path, counts_path, tmp_path / run)
     first = (tmp_path / "first" / "turn_flows.csv").read_text()
     assert first == (tmp_path / "second" / "turn_flows.csv").read_text()
 
 
-def test_generate_road_demand_scale_multiplies_the_requested_counts(
-    tmp_path, monkeypatch, load_script, network_config_path
+def test_generate_flows_rejects_counts_without_a_junction(
+    tmp_path, monkeypatch, load_script, config_path, counts_path
 ):
-    for scale in ("1", "2"):
-        run_generate_road_demand(
-            monkeypatch,
-            load_script,
-            network_config_path,
-            tmp_path / scale,
-            "--seed",
-            "3",
-            "--scale",
-            scale,
-        )
-    single = pd.read_csv(tmp_path / "1" / "junction_balance.csv")["requested"].sum()
-    double = pd.read_csv(tmp_path / "2" / "junction_balance.csv")["requested"].sum()
-    assert double == pytest.approx(2 * single, rel=0.01)
+    counts = pd.read_csv(counts_path).drop(columns="J4")
+    counts.to_csv(counts_path, index=False)
+    with pytest.raises(SystemExit, match=r"no column for junctions \['J4'\]"):
+        generate_flows(monkeypatch, load_script, config_path, counts_path, tmp_path / "out")
 
 
-def test_generate_road_demand_rejects_an_invalid_config(
-    tmp_path, monkeypatch, load_script, network_config_path
+def test_generate_flows_rejects_an_invalid_config(
+    tmp_path, monkeypatch, load_script, config_path, counts_path
 ):
-    network_config_path.write_text(
-        network_config_path.read_text().replace("ratio = 0.7", "ratio = 0.6", 1)
+    config_path.write_text(
+        config_path.read_text().replace("preference = 0.7", "preference = -1", 1)
     )
-    with pytest.raises(SystemExit, match="sum to 0.9, not 1"):
-        run_generate_road_demand(monkeypatch, load_script, network_config_path, tmp_path / "out")
+    with pytest.raises(SystemExit, match="preference must not be negative"):
+        generate_flows(monkeypatch, load_script, config_path, counts_path, tmp_path / "out")

@@ -1,7 +1,5 @@
 # Traffic Generation and Signal Control
 
-## Overview
-
 The project aims to simulate road traffic and develop intelligent traffic signal control using machine learning.
 
 The system combines:
@@ -13,90 +11,62 @@ The system combines:
 
 The primary data source is the [Traffic Prediction Dataset](https://www.kaggle.com/datasets/fedesoriano/traffic-prediction-dataset).
 
-## Getting Started
+## Setup
 
-### Requirements
+Requirements:
 
 - [uv](https://docs.astral.sh/uv/getting-started/installation/), which installs the Python version from `.python-version` and all Python dependencies
 - Git
 
-### Installation
-
-Clone the repository:
+Clone the repository and install the project dependencies, including SUMO 1.28.0 (about 500 MB), into `.venv`:
 
 ```bash
 git clone https://github.com/iwonieevo/trafficgen-signal-control.git
 cd trafficgen-signal-control
-```
-
-Install the project dependencies, including SUMO 1.28.0 (about 500 MB), into `.venv`:
-
-```bash
 uv sync
 ```
 
 SUMO is installed from the `eclipse-sumo` package, which has builds for Linux, Windows (x86-64) and macOS 15 or newer on Apple silicon. There is no build for Intel Macs: install [SUMO](https://sumo.dlr.de/docs/Installing/index.html) separately, and add `--no-group sumo` to the `uv` commands. On macOS, the official documentation lists [XQuartz](https://sumo.dlr.de/docs/Installing/index.html) as a requirement for `sumo-gui`.
 
-### Running Simulations
-
-Run a scenario from the repository root, on any platform:
-
-```bash
-uv run python scripts/run_sumo.py <scenario> [--gui]
-```
-
-- `<scenario>`: name of a directory in `sumo/scenarios/`.
-- `--gui`: launch the simulation with SUMO-GUI. Without it, the simulation runs headlessly.
-
-Example:
-
-```bash
-uv run python scripts/run_sumo.py single-intersection --gui
-```
-
-The scenarios and how to add one are described in [docs/sumo.md](docs/sumo.md).
-
-### Generating Traffic
-
-The generator produces hourly vehicle counts per junction (layer 1) and turns them into flows on every road and turn of a configured network (layer 2). Layer 2 is described in [docs/layer2.md](docs/layer2.md).
-
-Download the Kaggle dataset to `data/raw/kaggle_traffic.csv` and split it into one file per junction, `data/processed/kaggle_junction_<n>.csv` (no Kaggle account is needed):
+Download the Kaggle dataset and split it into one file per junction in `data/processed/` (no Kaggle account is needed):
 
 ```bash
 uv run python scripts/download_kaggle_data.py
 ```
 
-Generate hourly vehicle counts for one junction. The start is included, the end is excluded, and both must be whole hours:
+## Quick start
+
+All commands run from the repository root, on any platform.
+
+Run a SUMO scenario, with or without the GUI:
 
 ```bash
-uv run python scripts/generate_traffic.py --junction J1 --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/j1.csv
+uv run python scripts/run_sumo.py single-intersection --gui
 ```
 
-Use `--scale` to multiply the volume. Dates outside the data keep the traffic level of the nearest date in the data, because growth is not extrapolated.
+Generate a week of hourly counts for the junctions of the 2x2 grid, then the flows on every road and turn of the grid:
 
-Junctions and their data files are defined in `configs/traffic.toml`. To use your own data, point a junction to a CSV file like this, with whole hours, no duplicate datetimes and at least one full week of consecutive hours:
-
-```text
-datetime,vehicles
-2017-04-03 00:00:00,48
-2017-04-03 01:00:00,37
+```bash
+uv run python scripts/generate_counts.py --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
+uv run python scripts/generate_flows.py --counts outputs/counts.csv --output-dir outputs/flows
 ```
 
-From Python:
+## Documentation
 
-```python
-from trafficgen import build_generators, load_config
+| Doc | Contents |
+|---|---|
+| [docs/traffic-generation.md](docs/traffic-generation.md) | The traffic generator as a whole: its two parts, the shared config, which script to run when |
+| [docs/junction-counts.md](docs/junction-counts.md) | Junction counts: the model of hourly counts per junction, its data, config, script and output |
+| [docs/network-flows.md](docs/network-flows.md) | Network flows: how counts are spread over the roads and turns of a network, config, script and output |
+| [docs/sumo.md](docs/sumo.md) | SUMO scenarios: running them, their layout, the available scenarios |
 
-generators = build_generators(load_config("configs/traffic.toml"))
-counts = generators["J1"].sample("2017-04-03", "2017-04-10", seed=42)
-```
-
-Two notebooks describe the data and the model. Open them with `uv run jupyter lab`:
+Notebooks, opened with `uv run jupyter lab`:
 
 - `notebooks/kaggle_data_eda.ipynb`: exploratory analysis of the Kaggle dataset.
-- `notebooks/layer1_model_fit.ipynb`: how well the hourly count models (layer 1) fit the data. It does not cover road-level demand (layer 2), since the raw data has no road information to test it against.
+- `notebooks/junction_counts_fit.ipynb`: how well the junction counts models fit the data.
+- `notebooks/network_flows.ipynb`: what the network flows do with a week of counts.
 
-### Development
+## Development
 
 Add a dependency with `uv add <package>`, or `uv add --group <group> <package>` for a dependency group. Commit the updated `uv.lock`.
 
@@ -126,19 +96,21 @@ gh workflow run all-platforms.yml --ref <branch>
 
 The project is pinned to Python 3.14, the only version used in development and CI. `pyproject.toml` allows Python 3.12 and newer, so 3.12 should work in theory, but it is not tested.
 
-## Project Structure
-
-The repository is under active development.
+## Project structure
 
 | Path | Description |
 |---|---|
-| `src/trafficgen/` | Traffic generator package |
-| `configs/` | Traffic generator configuration |
-| `notebooks/` | Data analysis and model fit |
+| `src/trafficgen/` | Traffic generator package: junction counts in `counts/`, network flows in `flows/` |
+| `configs/` | Traffic generator configs, matching the SUMO scenarios of the same name |
 | `sumo/scenarios/` | SUMO simulation scenarios |
-| `scripts/` | Utilities for downloading data, generating traffic and running simulations |
+| `scripts/` | Downloading data, generating traffic and configs, running simulations |
+| `notebooks/` | Data analysis, model fit and network flows |
 | `tests/` | Automated tests, grouped by what they need |
 | `docs/` | Documentation of the project parts |
+
+## License
+
+[MIT](LICENSE)
 
 ## References
 

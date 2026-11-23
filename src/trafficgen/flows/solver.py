@@ -21,7 +21,7 @@ from scipy.optimize import minimize, nnls
 from trafficgen.flows.result import FlowWarning, NetworkFlows
 
 if TYPE_CHECKING:
-    from trafficgen.flows.config import NetworkConfig
+    from trafficgen.flows.network import NetworkConfig
 
 EXACT_FIT_TOLERANCE = 1e-10
 EXACT_FIT_MAX_ITERATIONS = 500

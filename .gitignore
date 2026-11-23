@@ -37,6 +37,7 @@ venv/
 events.out.tfevents.*
 
 # Simulation and experiment outputs
+/scenarios/*/runs/
 /results/
 /outputs/
 /plots/

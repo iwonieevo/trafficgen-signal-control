@@ -12,7 +12,7 @@ import pandas as pd
 from trafficgen.timeutils import SECONDS_PER_HOUR
 
 if TYPE_CHECKING:
-    from trafficgen.flows.config import NetworkConfig, RoadConfig
+    from trafficgen.flows.network import NetworkConfig, RoadConfig
 
 NO_FLOW_VPH = 1e-9
 

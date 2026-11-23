@@ -34,16 +34,9 @@ def test_split_junctions_writes_one_file_per_junction(tmp_path, monkeypatch, loa
 
 
 @pytest.fixture
-def config_path(tmp_path, hourly_counts):
-    """Copy the grid config, with every junction using the same synthetic data."""
-    hourly_counts.to_csv(tmp_path / "data.csv")
-    grid_config = Path(__file__).parents[2] / "configs" / "grid_2x2.toml"
-    text = grid_config.read_text()
-    for number in range(1, 5):
-        text = text.replace(f"../data/processed/kaggle_junction_{number}.csv", "data.csv")
-    path = tmp_path / "config.toml"
-    path.write_text(text)
-    return path
+def config_path(grid_config_path):
+    """The grid config, with every junction using the same synthetic data."""
+    return grid_config_path
 
 
 def run_script(monkeypatch, load_script, name, *arguments):
@@ -202,9 +195,9 @@ def test_generate_flows_rejects_an_invalid_config(
     tmp_path, monkeypatch, load_script, config_path, counts_path
 ):
     config_path.write_text(
-        config_path.read_text().replace("preference = 0.7", "preference = -1", 1)
+        config_path.read_text().replace("straight = 0.7", "straight = -1", 1)
     )
-    with pytest.raises(SystemExit, match="preference must not be negative"):
+    with pytest.raises(SystemExit, match="turn preference of 'straight' is negative"):
         generate_flows(monkeypatch, load_script, config_path, counts_path, tmp_path / "out")
 
 

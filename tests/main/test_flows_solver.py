@@ -17,7 +17,9 @@ from trafficgen import (
     load_network_config,
 )
 
-CONFIGS_DIR = Path(__file__).parents[2] / "configs"
+SCENARIOS_DIR = Path(__file__).parents[2] / "scenarios"
+SINGLE = SCENARIOS_DIR / "single-intersection" / "scenario.toml"
+GRID = SCENARIOS_DIR / "grid-2x2" / "scenario.toml"
 
 
 def hours(count: int) -> pd.DatetimeIndex:
@@ -98,7 +100,7 @@ def assert_consistent(config: NetworkConfig, flows: NetworkFlows) -> None:
 
 
 def test_single_junction_reproduces_its_count_with_the_preferred_shares():
-    config = load_network_config(CONFIGS_DIR / "single_intersection.toml")
+    config = load_network_config(SINGLE)
     counts = counts_table(J1=[0, 37, 120, 5])
     flows = FlowSolver(config).solve(counts)
 
@@ -162,7 +164,7 @@ def test_lower_through_share_needs_no_adjustment():
 
 
 def test_grid_with_equal_counts_uses_the_preferred_shares():
-    config = load_network_config(CONFIGS_DIR / "grid_2x2.toml")
+    config = load_network_config(GRID)
     counts = pd.DataFrame(
         {junction: [50.0, 80.0] for junction in config.junction_ids}, index=hours(2)
     )
@@ -179,7 +181,7 @@ def test_grid_with_equal_counts_uses_the_preferred_shares():
 
 
 def test_grid_with_random_counts_meets_every_total():
-    config = load_network_config(CONFIGS_DIR / "grid_2x2.toml")
+    config = load_network_config(GRID)
     rng = np.random.default_rng(0)
     counts = pd.DataFrame(
         rng.integers(0, 150, size=(24, 4)), index=hours(24), columns=list(config.junction_ids)
@@ -192,7 +194,7 @@ def test_grid_with_random_counts_meets_every_total():
 
 
 def test_solve_is_deterministic():
-    config = load_network_config(CONFIGS_DIR / "grid_2x2.toml")
+    config = load_network_config(GRID)
     counts = counts_table(J1=[90.0], J2=[30.0], J3=[20.0], J4=[10.0])
     first, second = FlowSolver(config).solve(counts), FlowSolver(config).solve(counts)
     pd.testing.assert_frame_equal(first.turn_flows, second.turn_flows)

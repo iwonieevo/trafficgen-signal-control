@@ -44,21 +44,23 @@ Run a SUMO scenario, with or without the GUI:
 uv run python scripts/run_sumo.py single-intersection --gui
 ```
 
-Generate a week of hourly counts for the junctions of the 2x2 grid, then the flows on every road and turn of the grid:
+Generate a week of hourly counts for the junctions of the 2x2 grid, then the flows on every road and turn of the grid, into a run of the scenario:
 
 ```bash
-uv run python scripts/generate_counts.py --config configs/grid_2x2.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
-uv run python scripts/generate_flows.py --config configs/grid_2x2.toml --counts outputs/counts.csv --output-dir outputs/flows
+uv run python scripts/generate_counts.py --config scenarios/grid-2x2/scenario.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output scenarios/grid-2x2/runs/week-14/counts.csv
+uv run python scripts/generate_flows.py --config scenarios/grid-2x2/scenario.toml --counts scenarios/grid-2x2/runs/week-14/counts.csv --output-dir scenarios/grid-2x2/runs/week-14/flows
 ```
+
+What goes into a scenario, what is configured and what is generated is described in [docs/traffic-generation.md](docs/traffic-generation.md#what-you-provide-configure-and-get).
 
 ## Documentation
 
 | Doc | Contents |
 |---|---|
-| [docs/traffic-generation.md](docs/traffic-generation.md) | The traffic generator as a whole: its two parts, the shared config, which script to run when |
+| [docs/traffic-generation.md](docs/traffic-generation.md) | The traffic generator as a whole: what you provide, configure and get, its two parts, the shared config |
 | [docs/junction-counts.md](docs/junction-counts.md) | Junction counts: the model of hourly counts per junction, its data, config, script and output |
 | [docs/network-flows.md](docs/network-flows.md) | Network flows: how counts are spread over the roads and turns of a network, config, script and output |
-| [docs/sumo.md](docs/sumo.md) | SUMO scenarios: running them, their layout, the available scenarios |
+| [docs/sumo.md](docs/sumo.md) | SUMO scenarios: running them, their files, the available scenarios |
 
 Notebooks, opened with `uv run jupyter lab`:
 
@@ -101,9 +103,9 @@ The project is pinned to Python 3.14, the only version used in development and C
 | Path | Description |
 |---|---|
 | `src/trafficgen/` | Traffic generator package: junction counts in `counts/`, network flows in `flows/` |
-| `configs/` | Traffic generator configs, matching the SUMO scenarios of the same name |
-| `sumo/scenarios/` | SUMO simulation scenarios |
-| `scripts/` | Downloading data, generating traffic and configs, running simulations |
+| `data/` | Downloaded and processed data, ignored by git |
+| `scenarios/` | One directory per scenario: SUMO files, traffic generator config, generated runs (ignored by git) |
+| `scripts/` | Downloading data, generating traffic, running simulations |
 | `notebooks/` | Data analysis, model fit and network flows |
 | `tests/` | Automated tests, grouped by what they need |
 | `docs/` | Documentation of the project parts |

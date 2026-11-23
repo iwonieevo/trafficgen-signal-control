@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 import numpy as np
 
 if TYPE_CHECKING:
-    from trafficgen.flows.config import FlowSettings, NetworkConfig, RoadConfig
+    from trafficgen.flows.network import FlowSettings, NetworkConfig, RoadConfig
 
 MAX_SPECTRAL_RADIUS_OF_LEAVING_NETWORK = 1 - 1e-9
 

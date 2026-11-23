@@ -1,7 +1,7 @@
 """The junction counts part of the config: the data of each junction and the volume scale.
 
-Only ``[[junctions]]`` and ``[counts]`` are read here. The network sections are left to
-``trafficgen.flows.config``.
+Only ``id`` and ``data`` of ``[[junctions]]`` and the ``[counts]`` section are read here.
+The network sections are left to ``trafficgen.flows.config``.
 """
 
 from dataclasses import dataclass, field
@@ -117,5 +117,6 @@ def _parse_junction(table: dict, config_dir: Path) -> JunctionData:
     Returns:
         The junction and the absolute path of its data.
     """
-    junction = parse_table(table, JunctionData, f"junction {table['id']!r}")
+    own_keys = {key: value for key, value in table.items() if key in ("id", "data")}
+    junction = parse_table(own_keys, JunctionData, f"junction {table['id']!r}")
     return JunctionData(id=junction.id, data=(config_dir / junction.data).resolve())

@@ -22,13 +22,8 @@ from trafficgen.counts.config import (
 from trafficgen.counts.models import HourlyCountModel, MeanProfileModel, StatisticalCountModel
 from trafficgen.counts.sampling import sample_junctions
 from trafficgen.data import load_counts, load_junction_counts
-from trafficgen.flows.config import (
-    FlowSettings,
-    NetworkConfig,
-    RoadConfig,
-    TurnConfig,
-    load_network_config,
-)
+from trafficgen.flows.config import load_network_config
+from trafficgen.flows.network import FlowSettings, NetworkConfig, RoadConfig, TurnConfig
 from trafficgen.flows.result import FlowWarning, NetworkFlows
 from trafficgen.flows.solver import FlowSolver
 

@@ -12,7 +12,7 @@ from trafficgen import (
 )
 from trafficgen.config import junction_ids, read_config
 
-CONFIGS_DIR = Path(__file__).parents[2] / "configs"
+SCENARIO_CONFIGS = sorted((Path(__file__).parents[2] / "scenarios").glob("*/scenario.toml"))
 
 
 def write_config(directory: Path, *ids: str, extra: str = "") -> Path:
@@ -72,11 +72,25 @@ def test_junction_needs_data_for_the_counts(tmp_path):
         load_counts_config(path)
 
 
-@pytest.mark.parametrize("name", ["single_intersection.toml", "grid_2x2.toml"])
-def test_both_parts_read_the_shipped_configs(name):
-    counts = load_counts_config(CONFIGS_DIR / name)
-    network = load_network_config(CONFIGS_DIR / name)
+def test_scenarios_have_configs():
+    assert len(SCENARIO_CONFIGS) >= 2
+
+
+@pytest.mark.parametrize("path", SCENARIO_CONFIGS, ids=lambda path: path.parent.name)
+def test_both_parts_read_the_scenario_configs(path):
+    counts = load_counts_config(path)
+    network = load_network_config(path)
     assert counts.junction_ids == list(network.junction_ids)
+    assert all(junction.data.name.startswith("kaggle_junction_") for junction in counts.junctions)
+
+
+def test_junction_keys_of_both_parts_are_allowed_and_others_rejected(tmp_path):
+    path = write_config(tmp_path, "A")
+    path.write_text(path.read_text() + 'node = "N1"\n')
+    assert load_counts_config(path).junction_ids == ["A"]
+    path.write_text(path.read_text() + 'nodes = "N2"\n')
+    with pytest.raises(ValueError, match=r"junction 'A' has unknown keys \['nodes'\]"):
+        load_counts_config(path)
 
 
 def test_fit_count_models_fits_one_model_per_junction(tmp_path, hourly_counts):

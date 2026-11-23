@@ -1,0 +1,17 @@
+# Traffic generator config of this scenario. See docs/traffic-generation.md.
+# Relative paths are resolved against the directory of this file.
+
+[[junctions]]
+id = "J1"
+data = "../../data/processed/kaggle_junction_1.csv"
+node = "J0"
+
+[network]
+file = "intersection.net.xml"
+turn_preferences = { right = 0.15, straight = 0.7, left = 0.15 }
+
+[counts]
+scale = 1.0
+
+[flows]
+tolerance_vph = 0.5

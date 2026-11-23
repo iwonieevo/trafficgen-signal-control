@@ -1,4 +1,4 @@
-"""Run a SUMO scenario from sumo/scenarios on Windows, Linux or macOS."""
+"""Run a SUMO scenario from scenarios/ on Windows, Linux or macOS."""
 
 import argparse
 import os
@@ -7,14 +7,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "sumo" / "scenarios"
+SCENARIOS_DIR = Path(__file__).resolve().parent.parent / "scenarios"
 
 
 def find_config(scenario: str) -> Path:
     """Find the configuration file of a scenario.
 
     Args:
-        scenario: Name of a directory in ``sumo/scenarios``.
+        scenario: Name of a directory in ``scenarios``.
 
     Returns:
         The only ``.sumocfg`` file of the scenario.
@@ -49,11 +49,10 @@ def find_executable(gui: bool) -> str:
     """
     name = "sumo-gui" if gui else "sumo"
     try:
-        import sumo
+        import sumo  # pyright: ignore[reportMissingImports]
     except ImportError:
         executable = shutil.which(name)
     else:
-        # Without eclipse-sumo, pyright resolves this import to the sumo/ folder of the repository.
         sumo_home = sumo.SUMO_HOME  # pyright: ignore[reportAttributeAccessIssue]
         os.environ["SUMO_HOME"] = sumo_home
         executable = shutil.which(name, path=str(Path(sumo_home) / "bin"))
@@ -66,7 +65,7 @@ def find_executable(gui: bool) -> str:
 def main() -> None:
     """Run the requested scenario and exit with the exit code of SUMO."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("scenario", help="name of a directory in sumo/scenarios")
+    parser.add_argument("scenario", help="name of a directory in scenarios/")
     parser.add_argument("--gui", action="store_true", help="run with sumo-gui")
     args = parser.parse_args()
 

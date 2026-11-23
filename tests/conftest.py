@@ -9,6 +9,7 @@ import pandas as pd
 import pytest
 
 SCRIPTS_DIR = Path(__file__).parent.parent / "scripts"
+SCENARIOS_DIR = Path(__file__).parent.parent / "scenarios"
 
 
 @pytest.fixture
@@ -33,3 +34,21 @@ def load_script():
         return module
 
     return load
+
+
+@pytest.fixture
+def grid_config_path(tmp_path, hourly_counts) -> Path:
+    """Copy the config of the grid-2x2 scenario, with synthetic data for every junction.
+
+    The copy lives in ``tmp_path`` and points at the network file of the scenario.
+    """
+    hourly_counts.to_csv(tmp_path / "data.csv")
+    scenario_dir = SCENARIOS_DIR / "grid-2x2"
+    text = (scenario_dir / "scenario.toml").read_text()
+    for number in range(1, 5):
+        text = text.replace(f"../../data/processed/kaggle_junction_{number}.csv", "data.csv")
+    net_file = (scenario_dir / "grid.net.xml").as_posix()
+    text = text.replace('file = "grid.net.xml"', f'file = "{net_file}"')
+    path = tmp_path / "scenario.toml"
+    path.write_text(text)
+    return path

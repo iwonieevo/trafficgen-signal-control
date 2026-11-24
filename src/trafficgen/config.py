@@ -2,9 +2,10 @@
 
 One file describes a whole setup. Each part reads and checks only its own sections:
 
-- ``[[junctions]]``: read by both parts. Both use ``id``, only junction counts uses ``data``.
+- ``[[junctions]]``: read by both parts. Both use ``id``, junction counts use ``data`` and
+  network flows use ``node``.
 - ``[counts]``: junction counts.
-- ``[flows]``, ``[[roads]]`` and ``[[turns]]``: network flows.
+- ``[network]``, ``[flows]``, ``[[roads]]`` and ``[[turns]]``: network flows.
 
 The format is described in docs/traffic-generation.md.
 """
@@ -18,7 +19,8 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
 
-SECTIONS = ("junctions", "counts", "flows", "roads", "turns")
+SECTIONS = ("junctions", "counts", "network", "flows", "roads", "turns")
+JUNCTION_KEYS = ("id", "data", "node")
 
 
 def read_config(path: str | Path) -> dict[str, Any]:
@@ -51,13 +53,21 @@ def junction_ids(config_tables: Mapping[str, Any]) -> tuple[str, ...]:
         Junction ids in the order of the file.
 
     Raises:
-        ValueError: If there are no junctions, a junction has no id, or two share an id.
+        ValueError: If there are no junctions, a junction has no id or an unknown key, or two
+            junctions share an id.
     """
     tables = config_tables.get("junctions", [])
     if not tables:
         raise ValueError("the config defines no junctions")
     if any("id" not in table for table in tables):
         raise ValueError("every junction needs an 'id'")
+    for table in tables:
+        unknown = sorted(set(table) - set(JUNCTION_KEYS))
+        if unknown:
+            raise ValueError(
+                f"junction {table['id']!r} has unknown keys {unknown}, "
+                f"allowed: {list(JUNCTION_KEYS)}"
+            )
     ids = tuple(str(table["id"]) for table in tables)
     if len(set(ids)) != len(ids):
         raise ValueError(f"duplicate junction ids: {list(ids)}")

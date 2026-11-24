@@ -6,7 +6,7 @@ on:
       - ".github/workflows/sumo.yml"
       - "pyproject.toml"
       - "scripts/run_sumo.py"
-      - "sumo/**"
+      - "scenarios/**"
       - "tests/sumo/**"
       - "uv.lock"
   push:

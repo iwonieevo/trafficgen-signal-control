@@ -42,7 +42,7 @@ One seed gives the whole table. The counts of a junction depend on which junctio
 
 ## Config
 
-The junction counts read `[[junctions]]` and `[counts]` of the [shared config](traffic-generation.md#config):
+The junction counts read `id` and `data` of `[[junctions]]` and `[counts]` of the [shared config](traffic-generation.md#config):
 
 | Key | Where | Default | Meaning |
 |---|---|---|---|
@@ -53,7 +53,7 @@ The junction counts read `[[junctions]]` and `[counts]` of the [shared config](t
 ## Running
 
 ```bash
-uv run python scripts/generate_counts.py --config configs/grid_2x2.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output outputs/counts.csv
+uv run python scripts/generate_counts.py --config scenarios/grid-2x2/scenario.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output scenarios/grid-2x2/runs/week-14/counts.csv
 ```
 
 | Option | Meaning |
@@ -77,7 +77,7 @@ From Python:
 ```python
 from trafficgen import fit_count_models, load_counts_config, sample_junctions
 
-models = fit_count_models(load_counts_config("configs/grid_2x2.toml"))
+models = fit_count_models(load_counts_config("scenarios/grid-2x2/scenario.toml"))
 counts = sample_junctions(models, "2017-04-03", "2017-04-10", seed=42)
 one_junction = models["J1"].sample("2017-04-03", "2017-04-10", seed=42)
 ```

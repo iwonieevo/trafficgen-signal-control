@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 REPO_ROOT = Path(__file__).parents[2]
-SCENARIOS_DIR = REPO_ROOT / "sumo" / "scenarios"
+SCENARIOS_DIR = REPO_ROOT / "scenarios"
 SCENARIOS = sorted(path.name for path in SCENARIOS_DIR.iterdir() if path.is_dir())
 
 

@@ -1,0 +1,32 @@
+# Traffic generator config of this scenario. See docs/traffic-generation.md.
+# Relative paths are resolved against the directory of this file.
+
+[[junctions]]
+id = "J1"
+data = "../../data/processed/kaggle_junction_1.csv"
+node = "A0"
+
+[[junctions]]
+id = "J2"
+data = "../../data/processed/kaggle_junction_2.csv"
+node = "B0"
+
+[[junctions]]
+id = "J3"
+data = "../../data/processed/kaggle_junction_3.csv"
+node = "A1"
+
+[[junctions]]
+id = "J4"
+data = "../../data/processed/kaggle_junction_4.csv"
+node = "B1"
+
+[network]
+file = "grid.net.xml"
+turn_preferences = { right = 0.15, straight = 0.7, left = 0.15 }
+
+[counts]
+scale = 1.0
+
+[flows]
+tolerance_vph = 0.5

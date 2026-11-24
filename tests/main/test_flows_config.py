@@ -180,3 +180,101 @@ def test_invalid_flow_settings_fail(tmp_path):
         load_network_config(
             write(tmp_path, JUNCTIONS + ROADS + TURNS + "[flows]\ntolerance_vph = 0\n")
         )
+
+
+SINGLE_NET = (
+    Path(__file__).parents[2] / "scenarios" / "single-intersection" / "intersection.net.xml"
+)
+
+
+def write_from_net(directory: Path, extra: str = "", node: str = "J0") -> Path:
+    """Write a config that reads its network from the single intersection."""
+    text = (
+        f'[[junctions]]\nid = "J1"\nnode = "{node}"\n\n'
+        f'[network]\nfile = "{SINGLE_NET.as_posix()}"\n\n' + extra
+    )
+    return write(directory, text)
+
+
+def test_network_is_read_from_the_sumo_file(tmp_path):
+    config = load_network_config(write_from_net(tmp_path))
+
+    assert config.junction_ids == ("J1",)
+    assert config.roads_by_id["-E0"].kind == "entry"
+    assert config.roads_by_id["-E0"].preference == 1.0
+    assert config.roads_by_id["E0"].kind == "exit"
+    assert config.roads_by_id["-E0"].length_m == pytest.approx(92.8)
+    assert config.roads_by_id["-E0"].speed_limit_kmh == pytest.approx(50.0)
+    preferences = {(turn.from_road, turn.to_road): turn.preference for turn in config.turns}
+    assert len(preferences) == 12
+    assert preferences[("-E0", "E3")] == pytest.approx(0.7)
+    assert preferences[("-E0", "E2")] == pytest.approx(0.15)
+
+
+def test_turn_preferences_of_the_network_can_be_changed(tmp_path):
+    config = load_network_config(
+        write_from_net(tmp_path, "turn_preferences = { straight = 0.5 }\n")
+    )
+    preferences = {(turn.from_road, turn.to_road): turn.preference for turn in config.turns}
+    assert preferences[("-E0", "E3")] == pytest.approx(0.5)
+    assert preferences[("-E0", "E2")] == pytest.approx(0.15)
+
+
+def test_single_roads_and_turns_can_be_overridden(tmp_path):
+    overrides = (
+        '[[roads]]\nid = "-E0"\npreference = 3.0\n\n'
+        '[[turns]]\nfrom_road = "-E0"\nto_road = "E3"\npreference = 0.9\n'
+    )
+    config = load_network_config(write_from_net(tmp_path, overrides))
+
+    assert config.roads_by_id["-E0"].preference == 3.0
+    assert config.roads_by_id["-E1"].preference == 1.0
+    turn = next(t for t in config.turns if (t.from_road, t.to_road) == ("-E0", "E3"))
+    assert turn.preference == 0.9
+
+
+@pytest.mark.parametrize(
+    ("extra", "node", "message"),
+    [
+        ("", "X", r"has no nodes \['X'\]"),
+        ('[[roads]]\nid = "nowhere"\n', "J0", "road 'nowhere' is not in the network file"),
+        ('[[roads]]\nid = "-E0"\nfrom = "J1"\n', "J0", r"\['from'\] cannot be changed"),
+        (
+            '[[turns]]\nfrom_road = "-E0"\nto_road = "-E1"\npreference = 1.0\n',
+            "J0",
+            "is not a connection of the network file",
+        ),
+    ],
+)
+def test_invalid_network_overrides_fail(tmp_path, extra, node, message):
+    with pytest.raises(ValueError, match=message):
+        load_network_config(write_from_net(tmp_path, extra, node))
+
+
+def test_junction_needs_a_node_with_a_network_file(tmp_path):
+    path = write(
+        tmp_path, f'[[junctions]]\nid = "J1"\n\n[network]\nfile = "{SINGLE_NET.as_posix()}"\n'
+    )
+    with pytest.raises(ValueError, match="junction 'J1' needs a 'node'"):
+        load_network_config(path)
+
+
+def test_every_inner_node_needs_a_junction(tmp_path):
+    grid_net = SINGLE_NET.parents[1] / "grid-2x2" / "grid.net.xml"
+    path = write(
+        tmp_path,
+        f'[[junctions]]\nid = "J1"\nnode = "A0"\n\n[network]\nfile = "{grid_net.as_posix()}"\n',
+    )
+    with pytest.raises(ValueError, match="node 'A1' of grid.net.xml is not a dead end"):
+        load_network_config(path)
+
+
+def test_missing_network_file_and_unknown_direction_fail(tmp_path):
+    with pytest.raises(ValueError, match="file not found"):
+        load_network_config(
+            write(
+                tmp_path, '[[junctions]]\nid = "J1"\nnode = "J0"\n\n[network]\nfile = "x.net.xml"\n'
+            )
+        )
+    with pytest.raises(ValueError, match=r"unknown directions \['uturn'\]"):
+        load_network_config(write_from_net(tmp_path, "turn_preferences = { uturn = 1.0 }\n"))

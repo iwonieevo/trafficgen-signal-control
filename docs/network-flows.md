@@ -2,7 +2,7 @@
 
 The network flows turn hourly counts per junction into hourly flows on every road and turn of a network, so that the traffic through every junction matches its count. The counts can come from the [junction counts](junction-counts.md) or from anywhere else. How the two parts fit together is described in [traffic-generation.md](traffic-generation.md).
 
-The network flows do not depend on SUMO, but road ids are meant to be SUMO edge ids, and the output is meant to be turned into SUMO input: entry flows into `<flow>` definitions and turn shares into turn definitions for `jtrrouter`.
+The network flows do not need SUMO, but they can read the network from a SUMO network file, so that road ids are SUMO edge ids, and the output is meant to be turned into SUMO input: entry flows into `<flow>` definitions and turn shares into turn definitions for `jtrrouter`.
 
 ## The problem
 
@@ -32,26 +32,59 @@ The totals cannot be met at all only when a junction cannot receive enough traff
 
 Flows are rates and need not be integers. Given the counts, the result is deterministic. Travel times between junctions are ignored, since they are far below an hour; they are reported, with a warning when a road takes more than `max_travel_time_fraction` of an hour. Flows per lane are reported with a warning above `lane_capacity_vph`, but are not limited: queues are measured by the simulation.
 
-`notebooks/network_flows.ipynb` shows the result for a week of counts on both shipped networks, how far the used shares are from the preferred ones, and how the result reacts to the config.
+`notebooks/network_flows.ipynb` shows the result for a week of counts on both scenarios, how far the used shares are from the preferred ones, and how the result reacts to the config.
 
 ## Config
 
-The network flows read the junction ids of `[[junctions]]`, and `[flows]`, `[[roads]]` and `[[turns]]` of the [shared config](traffic-generation.md#config). The `data` of the junctions is not used.
+The network flows read `id` and `node` of `[[junctions]]`, and `[network]`, `[flows]`, `[[roads]]` and `[[turns]]` of the [shared config](traffic-generation.md#config). The `data` of the junctions is not used.
+
+The network comes from one of two places.
+
+### From a SUMO network file
+
+This is how the scenarios are set up:
+
+```toml
+[[junctions]]
+id = "J1"
+node = "A0"            # the SUMO node of this junction
+
+[network]
+file = "grid.net.xml"  # relative to the config file
+turn_preferences = { right = 0.15, straight = 0.7, left = 0.15 }
+
+[flows]
+tolerance_vph = 0.5
+
+[[turns]]              # optional: change the preference of one turn
+from_road = "left0A0"
+to_road = "A0B0"
+preference = 0.5
+
+[[roads]]              # optional: change values of one road
+id = "left0A0"
+preference = 2.0
+```
+
+Every edge that is not internal becomes a road with the edge id, the length, lanes and speed limit of its lanes, and the junctions of its end nodes. Dead-end nodes are the boundary of the network, so an edge from a dead end is an entry road and an edge to one is an exit road. Every other node needs a junction with its `node`, otherwise the config is rejected. Every connection between two roads becomes a turn, with the preference of its SUMO direction (`dir`); U-turns are left out, and several turns of one direction from one road share its preference. Entry roads get preference 1, so the entry roads of a junction share its entry traffic equally.
+
+`[[roads]]` and `[[turns]]` then only change single roads and turns, which must exist in the network. A road can change `preference`, `through_share`, `length_m`, `lanes` and `speed_limit_kmh`, and a turn only its `preference`. SUMO itself is not needed: the file is only read.
+
+### Written by hand
+
+Without `[network]`, `[[roads]]` and `[[turns]]` describe the whole network, and junctions need no `node`. This is useful for small examples and tests, or for a network that is not in SUMO:
 
 ```toml
 [[junctions]]
 id = "J1"
 
-[flows]
-tolerance_vph = 0.5
-
 [[roads]]
-id = "left0A0"        # no 'from': the road enters the network
+id = "in_1"           # no 'from': the road enters the network
 to = "J1"
 preference = 1.0
 
 [[roads]]
-id = "A0B0"           # a road between two junctions
+id = "J1_J2"          # a road between two junctions
 from = "J1"
 to = "J2"
 length_m = 285.6
@@ -59,31 +92,36 @@ lanes = 1
 speed_limit_kmh = 50.0
 
 [[turns]]
-from_road = "left0A0"
-to_road = "A0B0"
+from_road = "in_1"
+to_road = "J1_J2"
 preference = 0.7
 ```
+
+### Keys
 
 | Key | Where | Default | Meaning |
 |---|---|---|---|
 | `id` | `[[junctions]]` | required | Unique name of the junction |
+| `node` | `[[junctions]]` | required with `[network]` | The node of the network file that is this junction |
+| `file` | `[network]` | required | SUMO network file, relative to the config file |
+| `turn_preferences` | `[network]` | 0.15, 0.7, 0.15 | Preferences of the `right`, `straight` and `left` turns. Directions that are left out keep their default |
 | `tolerance_vph` | `[flows]` | 0.5 | Largest difference between requested and achieved totals that counts as met |
 | `max_travel_time_fraction` | `[flows]` | 0.1 | Warn when the travel time at the speed limit is above this share of an hour |
 | `lane_capacity_vph` | `[flows]` | 1800 | Warn when the flow per lane is above this |
-| `id` | `[[roads]]` | required | Unique name of the road, ideally the SUMO edge id |
-| `from`, `to` | `[[roads]]` | none | Junctions where the road starts and ends. Without `from` the road enters the network, without `to` it leaves it |
-| `preference` | entry roads | required | Relative weight of the road among the entry roads of its junction |
+| `id` | `[[roads]]` | required | Unique name of the road, the SUMO edge id |
+| `from`, `to` | `[[roads]]`, by hand only | none | Junctions where the road starts and ends. Without `from` the road enters the network, without `to` it leaves it |
+| `preference` | entry roads | required by hand, 1 from a file | Relative weight of the road among the entry roads of its junction |
 | `through_share` | roads between junctions | 1 | Share of the vehicles that reach the end of the road, the rest leave on the way, for example to park |
-| `length_m`, `lanes`, `speed_limit_kmh` | `[[roads]]` | none | Only used for travel times and the capacity warnings |
+| `length_m`, `lanes`, `speed_limit_kmh` | `[[roads]]` | none by hand, from a file | Only used for travel times and the capacity warnings |
 | `from_road`, `to_road` | `[[turns]]` | required | A road that ends at a junction and a road that starts at the same junction |
-| `preference` | `[[turns]]` | required | Relative weight of the turn among the turns from `from_road` |
+| `preference` | `[[turns]]` | required by hand | Relative weight of the turn among the turns from `from_road` |
 
-Preferences are relative: 0.15/0.7/0.15 and 3/14/3 give the same shares. Invalid configs fail with a message naming the file and the problem, for example an unknown road, a turn between roads that do not meet, a junction with no way in or out, preferences that are all 0, or roads that only lead back to each other.
+Preferences are relative: 0.15/0.7/0.15 and 3/14/3 give the same shares. Invalid configs fail with a message naming the file and the problem, for example an unknown road or node, a turn between roads that do not meet, a junction with no way in or out, preferences that are all 0, or roads that only lead back to each other.
 
 ## Running
 
 ```bash
-uv run python scripts/generate_flows.py --config configs/grid_2x2.toml --counts outputs/counts.csv --output-dir outputs/flows
+uv run python scripts/generate_flows.py --config scenarios/grid-2x2/scenario.toml --counts scenarios/grid-2x2/runs/week-14/counts.csv --output-dir scenarios/grid-2x2/runs/week-14/flows
 ```
 
 | Option | Meaning |
@@ -99,8 +137,8 @@ From Python:
 ```python
 from trafficgen import FlowSolver, load_junction_counts, load_network_config
 
-flows = FlowSolver(load_network_config("configs/grid_2x2.toml")).solve(
-    load_junction_counts("outputs/counts.csv")
+flows = FlowSolver(load_network_config("scenarios/grid-2x2/scenario.toml")).solve(
+    load_junction_counts("scenarios/grid-2x2/runs/week-14/counts.csv")
 )
 flows.turn_flows, flows.junction_balance, flows.adjusted_hours, flows.unbalanced_hours
 ```
@@ -123,7 +161,9 @@ Every table except `roads` has one row per hour and item.
 
 | Module | Contents |
 |---|---|
-| `trafficgen.flows.config` | `RoadConfig`, `TurnConfig`, `FlowSettings`, `NetworkConfig`, `load_network_config` |
+| `trafficgen.flows.network` | `RoadConfig`, `TurnConfig`, `FlowSettings`, `NetworkConfig` |
+| `trafficgen.flows.sumo_network` | Reading roads and turns from a SUMO network file |
+| `trafficgen.flows.config` | `load_network_config`: the config sections above |
 | `trafficgen.flows.validation` | Checks of the network config |
 | `trafficgen.flows.solver` | `FlowSolver`: the two steps above |
 | `trafficgen.flows.result` | `NetworkFlows`: the output tables and warnings, `FlowWarning` |

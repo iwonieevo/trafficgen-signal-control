@@ -1,4 +1,4 @@
-"""Read the TOML config file shared by both parts of the generator.
+"""Read the TOML config file shared by the parts of the generator.
 
 One file describes a whole setup. Each part reads and checks only its own sections:
 
@@ -6,6 +6,7 @@ One file describes a whole setup. Each part reads and checks only its own sectio
   network flows use ``node``.
 - ``[counts]``: junction counts.
 - ``[network]``, ``[flows]``, ``[[roads]]`` and ``[[turns]]``: network flows.
+- ``[sumo]``, and the network file of ``[network]``: the SUMO input.
 
 The format is described in docs/traffic-generation.md.
 """
@@ -19,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from _typeshed import DataclassInstance
 
-SECTIONS = ("junctions", "counts", "network", "flows", "roads", "turns")
+SECTIONS = ("junctions", "counts", "network", "flows", "roads", "turns", "sumo")
 JUNCTION_KEYS = ("id", "data", "node")
 
 

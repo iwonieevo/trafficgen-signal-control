@@ -37,18 +37,32 @@ def load_script():
 
 
 @pytest.fixture
-def grid_config_path(tmp_path, hourly_counts) -> Path:
-    """Copy the config of the grid-2x2 scenario, with synthetic data for every junction.
+def scenario_config(tmp_path, hourly_counts):
+    """Return a function that copies the config of a scenario, with synthetic data.
 
-    The copy lives in ``tmp_path`` and points at the network file of the scenario.
+    Every junction of the copy uses the same synthetic counts. The copy lives in
+    ``tmp_path`` and points at the network file of the scenario.
     """
     hourly_counts.to_csv(tmp_path / "data.csv")
-    scenario_dir = SCENARIOS_DIR / "grid-2x2"
-    text = (scenario_dir / "scenario.toml").read_text()
-    for number in range(1, 5):
-        text = text.replace(f"../../data/processed/kaggle_junction_{number}.csv", "data.csv")
-    net_file = (scenario_dir / "grid.net.xml").as_posix()
-    text = text.replace('file = "grid.net.xml"', f'file = "{net_file}"')
-    path = tmp_path / "scenario.toml"
-    path.write_text(text)
-    return path
+
+    def copy(name: str) -> Path:
+        scenario_dir = SCENARIOS_DIR / name
+        lines = []
+        for line in (scenario_dir / "scenario.toml").read_text().splitlines():
+            if line.startswith("data = "):
+                line = 'data = "data.csv"'
+            elif line.startswith("file = "):
+                net_file = scenario_dir / line.split('"')[1]
+                line = f'file = "{net_file.as_posix()}"'
+            lines.append(line)
+        path = tmp_path / f"{name}.toml"
+        path.write_text("\n".join(lines) + "\n")
+        return path
+
+    return copy
+
+
+@pytest.fixture
+def grid_config_path(scenario_config) -> Path:
+    """The config of the grid-2x2 scenario, with synthetic data for every junction."""
+    return scenario_config("grid-2x2")

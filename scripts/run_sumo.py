@@ -1,4 +1,4 @@
-"""Run a SUMO scenario from scenarios/ on Windows, Linux or macOS."""
+"""Run a SUMO scenario from scenarios/, or a given SUMO config, on Windows, Linux or macOS."""
 
 import argparse
 import os
@@ -14,14 +14,22 @@ def find_config(scenario: str) -> Path:
     """Find the configuration file of a scenario.
 
     Args:
-        scenario: Name of a directory in ``scenarios``.
+        scenario: Name of a directory in ``scenarios``, or the path of a ``.sumocfg``
+            file, for example ``run.sumocfg`` of a generated run.
 
     Returns:
-        The only ``.sumocfg`` file of the scenario.
+        The only ``.sumocfg`` file of the scenario, or the given file.
 
     Raises:
-        SystemExit: If the scenario does not exist or does not have exactly one config.
+        SystemExit: If the scenario or file does not exist, or the scenario does not have
+            exactly one config.
     """
+    if scenario.endswith(".sumocfg"):
+        path = Path(scenario)
+        if not path.is_file():
+            sys.exit(f"SUMO config not found: {path}")
+        return path
+
     directory = SCENARIOS_DIR / scenario
     if not directory.is_dir():
         available = ", ".join(sorted(path.name for path in SCENARIOS_DIR.iterdir()))
@@ -65,7 +73,9 @@ def find_executable(gui: bool) -> str:
 def main() -> None:
     """Run the requested scenario and exit with the exit code of SUMO."""
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("scenario", help="name of a directory in scenarios/")
+    parser.add_argument(
+        "scenario", help="name of a directory in scenarios/, or the path of a .sumocfg file"
+    )
     parser.add_argument("--gui", action="store_true", help="run with sumo-gui")
     args = parser.parse_args()
 

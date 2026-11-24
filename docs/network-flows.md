@@ -2,7 +2,7 @@
 
 The network flows turn hourly counts per junction into hourly flows on every road and turn of a network, so that the traffic through every junction matches its count. The counts can come from the [junction counts](junction-counts.md) or from anywhere else. How the two parts fit together is described in [traffic-generation.md](traffic-generation.md).
 
-The network flows do not need SUMO, but they can read the network from a SUMO network file, so that road ids are SUMO edge ids, and the output is meant to be turned into SUMO input: entry flows into `<flow>` definitions and turn shares into turn definitions for `jtrrouter`.
+The network flows do not need SUMO, but they can read the network from a SUMO network file, so that road ids are SUMO edge ids, and the output is turned into SUMO input as described in [traffic-generation.md](traffic-generation.md#sumo-input): entry flows into `<flow>` definitions and the used turn shares into turn ratios for `jtrrouter`.
 
 ## The problem
 

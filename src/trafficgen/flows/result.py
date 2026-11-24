@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import asdict, dataclass, replace
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import numpy as np
@@ -110,6 +111,24 @@ class NetworkFlows:
             "junction_balance": self.junction_balance,
             "roads": self.roads,
         }
+
+    def write_tables(self, output_dir: str | Path) -> list[Path]:
+        """Write every output table to ``<output_dir>/<table>.csv``.
+
+        Args:
+            output_dir: Directory for the files. It is created if needed.
+
+        Returns:
+            The written files.
+        """
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        written_paths = []
+        for table_name, table in self.output_tables.items():
+            path = output_dir / f"{table_name}.csv"
+            table.to_csv(path, index=False, lineterminator="\n")
+            written_paths.append(path)
+        return written_paths
 
     @property
     def unbalanced_hours(self) -> pd.DatetimeIndex:

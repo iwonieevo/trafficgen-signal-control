@@ -11,13 +11,7 @@ import sys
 import warnings
 from pathlib import Path
 
-from trafficgen import (
-    FlowSolver,
-    FlowWarning,
-    NetworkFlows,
-    load_junction_counts,
-    load_network_config,
-)
+from trafficgen import FlowSolver, FlowWarning, load_junction_counts, load_network_config
 
 
 def parse_args() -> argparse.Namespace:
@@ -37,25 +31,6 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def write_output_tables(flows: NetworkFlows, output_dir: Path) -> list[Path]:
-    """Write every output table to ``<output_dir>/<table>.csv``.
-
-    Args:
-        flows: The computed flows.
-        output_dir: Directory for the files. It is created if needed.
-
-    Returns:
-        The written files.
-    """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    written_paths = []
-    for table_name, table in flows.output_tables.items():
-        path = output_dir / f"{table_name}.csv"
-        table.to_csv(path, index=False, lineterminator="\n")
-        written_paths.append(path)
-    return written_paths
-
-
 def main() -> None:
     """Read the network and the counts, compute the flows and write them.
 
@@ -72,7 +47,7 @@ def main() -> None:
     except ValueError as error:
         sys.exit(str(error))
 
-    for path in write_output_tables(flows, args.output_dir):
+    for path in flows.write_tables(args.output_dir):
         print(f"wrote {path}")
     if len(flows.adjusted_hours):
         print(

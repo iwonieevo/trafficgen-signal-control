@@ -44,20 +44,20 @@ Run a SUMO scenario, with or without the GUI:
 uv run python scripts/run_sumo.py single-intersection --gui
 ```
 
-Generate a week of hourly counts for the junctions of the 2x2 grid, then the flows on every road and turn of the grid, into a run of the scenario:
+Generate a week of traffic for the 2x2 grid from the Kaggle data, then run it in SUMO:
 
 ```bash
-uv run python scripts/generate_counts.py --config scenarios/grid-2x2/scenario.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --output scenarios/grid-2x2/runs/week-14/counts.csv
-uv run python scripts/generate_flows.py --config scenarios/grid-2x2/scenario.toml --counts scenarios/grid-2x2/runs/week-14/counts.csv --output-dir scenarios/grid-2x2/runs/week-14/flows
+uv run python scripts/generate_traffic.py --config scenarios/grid-2x2/scenario.toml --start 2017-04-03T00:00 --end 2017-04-10T00:00 --seed 42 --run week-14
+uv run python scripts/run_sumo.py scenarios/grid-2x2/runs/week-14/sumo/run.sumocfg --gui
 ```
 
-What goes into a scenario, what is configured and what is generated is described in [docs/traffic-generation.md](docs/traffic-generation.md#what-you-provide-configure-and-get).
+The first command writes the junction counts, the network flows and the SUMO input of the run to `scenarios/grid-2x2/runs/week-14/`. What goes into a scenario, what is configured and what is generated, how to run each step on its own and how to use a run from Python is described in [docs/traffic-generation.md](docs/traffic-generation.md).
 
 ## Documentation
 
 | Doc | Contents |
 |---|---|
-| [docs/traffic-generation.md](docs/traffic-generation.md) | The traffic generator as a whole: what you provide, configure and get, its two parts, the shared config |
+| [docs/traffic-generation.md](docs/traffic-generation.md) | The traffic generator as a whole: what you provide, configure and get, its steps, the shared config, the SUMO input and using a run from code |
 | [docs/junction-counts.md](docs/junction-counts.md) | Junction counts: the model of hourly counts per junction, its data, config, script and output |
 | [docs/network-flows.md](docs/network-flows.md) | Network flows: how counts are spread over the roads and turns of a network, config, script and output |
 | [docs/sumo.md](docs/sumo.md) | SUMO scenarios: running them, their files, the available scenarios |
@@ -67,6 +67,7 @@ Notebooks, opened with `uv run jupyter lab`:
 - `notebooks/kaggle_data_eda.ipynb`: exploratory analysis of the Kaggle dataset.
 - `notebooks/junction_counts_fit.ipynb`: how well the junction counts models fit the data.
 - `notebooks/network_flows.ipynb`: what the network flows do with a week of counts.
+- `notebooks/traffic_generation.ipynb`: the whole traffic generator for one day, run in SUMO and compared with the requested counts.
 
 ## Development
 
@@ -85,7 +86,7 @@ Tests are grouped by what they need:
 | Group | What it tests | Where it runs |
 |---|---|---|
 | `tests/main/` | Generator, scripts and scenario files, without SUMO | `CI` workflow, on every pull request |
-| `tests/sumo/` | Scenarios in the real simulator | `SUMO` workflow, when SUMO files change |
+| `tests/sumo/` | Scenarios and generated traffic in the real simulator | `SUMO` workflow, when the scenarios, the generator, scripts or SUMO tests change |
 | `tests/notebooks/` | Runs every notebook, needs the downloaded dataset | Only by hand |
 
 `uv run pytest` runs the first two groups. Run the notebooks with `uv run pytest tests/notebooks` when a change could affect them.
@@ -102,7 +103,7 @@ The project is pinned to Python 3.14, the only version used in development and C
 
 | Path | Description |
 |---|---|
-| `src/trafficgen/` | Traffic generator package: junction counts in `counts/`, network flows in `flows/` |
+| `src/trafficgen/` | Traffic generator package: junction counts in `counts/`, network flows in `flows/`, SUMO input in `simulation/`, all together in `pipeline.py` |
 | `data/` | Downloaded and processed data, ignored by git |
 | `scenarios/` | One directory per scenario: SUMO files, traffic generator config, generated runs (ignored by git) |
 | `scripts/` | Downloading data, generating traffic, running simulations |

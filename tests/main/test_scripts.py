@@ -194,9 +194,7 @@ def test_generate_flows_rejects_counts_without_a_junction(
 def test_generate_flows_rejects_an_invalid_config(
     tmp_path, monkeypatch, load_script, config_path, counts_path
 ):
-    config_path.write_text(
-        config_path.read_text().replace("straight = 0.7", "straight = -1", 1)
-    )
+    config_path.write_text(config_path.read_text().replace("straight = 0.7", "straight = -1", 1))
     with pytest.raises(SystemExit, match="turn preference of 'straight' is negative"):
         generate_flows(monkeypatch, load_script, config_path, counts_path, tmp_path / "out")
 
@@ -206,3 +204,22 @@ def test_scripts_require_a_config(monkeypatch, load_script, capsys, name):
     with pytest.raises(SystemExit):
         run_script(monkeypatch, load_script, name, "--start", "2024-03-04T00:00")
     assert "the following arguments are required: --config" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        (["--start", "2024-03-04"], "give --start and --end, or --counts"),
+        (["--counts", "c.csv", "--start", "2024-03-04"], "cannot be combined"),
+    ],
+)
+def test_generate_traffic_needs_a_time_range_or_counts(arguments, message, config_path):
+    script = Path(__file__).parents[2] / "scripts" / "generate_traffic.py"
+    result = subprocess.run(
+        [sys.executable, str(script), "--config", str(config_path), *arguments],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 2
+    assert message in result.stderr

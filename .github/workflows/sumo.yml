@@ -5,8 +5,9 @@ on:
     paths: &sumo-paths
       - ".github/workflows/sumo.yml"
       - "pyproject.toml"
-      - "scripts/run_sumo.py"
+      - "scripts/**"
       - "scenarios/**"
+      - "src/**"
       - "tests/sumo/**"
       - "uv.lock"
   push:

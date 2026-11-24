@@ -10,8 +10,10 @@ From the repository root, on any platform:
 uv run python scripts/run_sumo.py <scenario> [--gui]
 ```
 
-- `<scenario>`: name of a directory in `scenarios/`.
+- `<scenario>`: name of a directory in `scenarios/`, or the path of a `.sumocfg` file, for example `scenarios/grid-2x2/runs/<run>/sumo/run.sumocfg` of a run of the traffic generator.
 - `--gui`: open the simulation in `sumo-gui`. Without it, SUMO runs headless, which is what the tests and training use.
+
+The `.rou.xml` files of the scenarios hold a small fixed demand, so that every scenario runs without data. Generated traffic is run from the `.sumocfg` of a run, see [traffic-generation.md](traffic-generation.md#running).
 
 ## Scenario layout
 
@@ -23,7 +25,7 @@ A scenario directory holds exactly one `.sumocfg` file, which `scripts/run_sumo.
 | `*.net.xml` | Road network: edges, lanes, junctions and traffic light programs |
 | `*.rou.xml` | Traffic demand: vehicles, routes and flows. In the committed scenarios this is a small fixed demand, so that each scenario runs without data |
 | `scenario.toml` | Optional: the traffic generator config of the scenario, see [traffic-generation.md](traffic-generation.md#config) |
-| `runs/` | Generated traffic and outputs of runs, ignored by git |
+| `runs/` | Generated traffic and outputs of runs, ignored by git. Each run has its own `sumo/run.sumocfg` with the network of the scenario and the generated routes |
 
 A new scenario directory is picked up by the tests automatically: `tests/main/test_scenarios.py` checks that its files exist and are valid XML, and `tests/sumo/` runs it in SUMO.
 

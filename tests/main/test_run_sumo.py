@@ -57,3 +57,14 @@ def test_find_executable_reports_a_missing_installation(launcher, monkeypatch):
     monkeypatch.setattr(shutil, "which", lambda name, path=None: None)
     with pytest.raises(SystemExit, match="SUMO executable not found: sumo-gui"):
         launcher.find_executable(True)
+
+
+def test_find_config_accepts_the_path_of_a_config(launcher, tmp_path):
+    config = tmp_path / "run.sumocfg"
+    config.touch()
+    assert launcher.find_config(str(config)) == config
+
+
+def test_find_config_reports_a_missing_config_file(launcher, tmp_path):
+    with pytest.raises(SystemExit, match="SUMO config not found"):
+        launcher.find_config(str(tmp_path / "missing.sumocfg"))

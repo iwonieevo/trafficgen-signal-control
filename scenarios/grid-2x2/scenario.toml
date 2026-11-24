@@ -30,3 +30,6 @@ scale = 1.0
 
 [flows]
 tolerance_vph = 0.5
+
+[sumo]
+departures = "poisson"

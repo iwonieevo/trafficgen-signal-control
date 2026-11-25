@@ -14,6 +14,7 @@ import pytest
 
 SCENARIO_DIR = Path(__file__).parents[2] / "scenarios" / "grid-2x2"
 MIN_YELLOW_S = 3.0
+FIXED_TIME_FILES = sorted(SCENARIO_DIR.glob("tls.fixed-*.add.xml"))
 
 # Signalized nodes, each with the nodes it is connected to in both directions.
 NEIGHBOURS = {
@@ -99,6 +100,39 @@ def test_green_always_ends_with_a_yellow_phase(network):
                 )
             if "y" in state:
                 assert float(phase.attrib["duration"]) >= MIN_YELLOW_S, program.attrib["id"]
+
+
+def test_there_is_a_fixed_time_program_for_every_traffic_level():
+    names = {path.name for path in FIXED_TIME_FILES}
+    assert names == {f"tls.fixed-x{scale}.add.xml" for scale in (1, 7, 12, 16)}
+
+
+@pytest.mark.parametrize("path", FIXED_TIME_FILES, ids=lambda path: path.name)
+def test_fixed_time_programs_keep_the_phases_of_the_network(network, path):
+    states_in_network = {
+        program.attrib["id"]: [phase.attrib["state"] for phase in program.iter("phase")]
+        for program in network.iter("tlLogic")
+    }
+    programs = ET.parse(path).getroot().findall("tlLogic")
+    assert sorted(program.attrib["id"] for program in programs) == sorted(NEIGHBOURS)
+
+    cycles = set()
+    for program in programs:
+        junction = program.attrib["id"]
+        # scripts/run_sumo.py finds the file by this name, and SUMO activates a new id.
+        assert f"tls.{program.attrib['programID']}.add.xml" == path.name
+        phases = program.findall("phase")
+        # The green phases are the actions of an RL agent, and the network has yellow after
+        # every green, so only the durations may differ.
+        assert [phase.attrib["state"] for phase in phases] == states_in_network[junction]
+        for phase in phases:
+            if "y" in phase.attrib["state"]:
+                assert float(phase.attrib["duration"]) >= MIN_YELLOW_S, junction
+        cycle = sum(float(phase.attrib["duration"]) for phase in phases)
+        assert 0 <= float(program.attrib["offset"]) < cycle, junction
+        cycles.add(cycle)
+    # Offsets only keep the junctions in step if all of them have the same cycle.
+    assert len(cycles) == 1
 
 
 def test_generator_config_names_every_signalized_node(network):

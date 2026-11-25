@@ -68,3 +68,95 @@ def test_find_config_accepts_the_path_of_a_config(launcher, tmp_path):
 def test_find_config_reports_a_missing_config_file(launcher, tmp_path):
     with pytest.raises(SystemExit, match="SUMO config not found"):
         launcher.find_config(str(tmp_path / "missing.sumocfg"))
+
+
+@pytest.fixture
+def scenario_with_controllers(tmp_path) -> Path:
+    """A scenario directory with a network, a config and the programs of two controllers."""
+    scenario = tmp_path / "scenario"
+    scenario.mkdir()
+    for name in ("grid.net.xml", "tls.fixed-x7.add.xml", "tls.actuated.add.xml"):
+        (scenario / name).touch()
+    (scenario / "grid.sumocfg").write_text(
+        '<configuration><input><net-file value="grid.net.xml"/></input></configuration>'
+    )
+    return scenario
+
+
+def write_run_config(scenario: Path, inputs: str = "") -> Path:
+    """Write the config of a run in the runs directory of a scenario, as the generator does."""
+    config = scenario / "runs" / "week" / "sumo" / "run.sumocfg"
+    config.parent.mkdir(parents=True)
+    config.write_text(
+        '<configuration><input><net-file value="../../../grid.net.xml"/>'
+        f'<route-files value="routes.rou.xml"/>{inputs}</input></configuration>'
+    )
+    return config
+
+
+def test_find_controller_looks_next_to_the_network(launcher, scenario_with_controllers):
+    expected = scenario_with_controllers / "tls.fixed-x7.add.xml"
+    run_config = write_run_config(scenario_with_controllers)
+
+    for config in (scenario_with_controllers / "grid.sumocfg", run_config):
+        assert launcher.find_controller(config, "fixed-x7").samefile(expected)
+
+
+def test_find_controller_lists_available_controllers(launcher, scenario_with_controllers):
+    config = scenario_with_controllers / "grid.sumocfg"
+    with pytest.raises(SystemExit, match="Unknown controller 'nope' .* actuated, fixed-x7"):
+        launcher.find_controller(config, "nope")
+
+
+def test_find_controller_requires_a_network_in_the_config(launcher, tmp_path):
+    config = tmp_path / "empty.sumocfg"
+    config.write_text("<configuration><input/></configuration>")
+    with pytest.raises(SystemExit, match="No net-file"):
+        launcher.find_controller(config, "fixed-x7")
+
+
+def test_command_without_a_controller_only_names_the_config(launcher, scenario_with_controllers):
+    config = scenario_with_controllers / "grid.sumocfg"
+    assert launcher.build_command("sumo", config) == ["sumo", "-c", str(config)]
+
+
+def test_command_adds_the_programs_of_the_controller(launcher, scenario_with_controllers):
+    config = write_run_config(scenario_with_controllers)
+
+    command = launcher.build_command("sumo", config, "actuated")
+
+    assert command[:4] == ["sumo", "-c", str(config), "--additional-files"]
+    assert Path(command[4]).samefile(scenario_with_controllers / "tls.actuated.add.xml")
+
+
+def test_command_keeps_the_additional_files_of_the_config(launcher, scenario_with_controllers):
+    # On the command line, --additional-files replaces the files of the config.
+    config = write_run_config(
+        scenario_with_controllers, '<additional-files value="detectors.add.xml, more.add.xml"/>'
+    )
+
+    files = launcher.build_command("sumo", config, "fixed-x7")[4].split(",")
+
+    assert [Path(file).name for file in files] == [
+        "detectors.add.xml",
+        "more.add.xml",
+        "tls.fixed-x7.add.xml",
+    ]
+    assert Path(files[0]).parent.samefile(config.parent)
+
+
+def test_main_runs_the_scenario_with_the_controller(launcher, monkeypatch):
+    commands = []
+    monkeypatch.setattr(sys, "argv", ["run_sumo.py", "grid-2x2", "--controller", "fixed-x12"])
+    monkeypatch.setattr(launcher, "find_executable", lambda gui: "sumo")
+    monkeypatch.setattr(
+        launcher.subprocess,
+        "run",
+        lambda command, check: commands.append(command) or SimpleNamespace(returncode=0),
+    )
+
+    with pytest.raises(SystemExit) as exit_info:
+        launcher.main()
+
+    assert exit_info.value.code == 0
+    assert Path(commands[0][4]).name == "tls.fixed-x12.add.xml"

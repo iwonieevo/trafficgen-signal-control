@@ -27,3 +27,17 @@ def test_scenario_config_is_valid(scenario):
             path = scenario / name.strip()
             assert path.is_file(), f"missing input file: {path.name}"
             ET.parse(path)
+
+
+@pytest.mark.parametrize("scenario", SCENARIOS, ids=lambda path: path.name)
+def test_additional_files_are_valid_and_name_existing_traffic_lights(scenario):
+    # Files like tls.<controller>.add.xml are not listed in the config, so check them here.
+    additional_files = sorted(scenario.glob("*.add.xml"))
+    if not additional_files:
+        return
+    network = ET.parse(next(scenario.glob("*.net.xml"))).getroot()
+    traffic_lights = {logic.attrib["id"] for logic in network.iter("tlLogic")}
+
+    for path in additional_files:
+        for logic in ET.parse(path).getroot().iter("tlLogic"):
+            assert logic.attrib["id"] in traffic_lights, path.name

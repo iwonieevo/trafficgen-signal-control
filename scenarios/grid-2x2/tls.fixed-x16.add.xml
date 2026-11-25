@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Fixed-time programs from scripts/tune_fixed_time.py, design hour 2017-04-03 11:00:00, saturation flow 1580 veh/h, lost time 3.3 s per phase, minimum green 8 s, maximum cycle 120 s. See docs/sumo.md. -->
+<additional>
+    <tlLogic id="A0" type="static" programID="fixed-x16" offset="0">
+        <phase duration="57" state="GGgrrrGGgrrr"/>
+        <phase duration="3" state="yyyrrryyyrrr"/>
+        <phase duration="57" state="rrrGGgrrrGGg"/>
+        <phase duration="3" state="rrryyyrrryyy"/>
+    </tlLogic>
+    <tlLogic id="A1" type="static" programID="fixed-x16" offset="25.7">
+        <phase duration="106" state="GGgrrrGGgrrr"/>
+        <phase duration="3" state="yyyrrryyyrrr"/>
+        <phase duration="8" state="rrrGGgrrrGGg"/>
+        <phase duration="3" state="rrryyyrrryyy"/>
+    </tlLogic>
+    <tlLogic id="B0" type="static" programID="fixed-x16" offset="74.7">
+        <phase duration="8" state="GGgrrrGGgrrr"/>
+        <phase duration="3" state="yyyrrryyyrrr"/>
+        <phase duration="106" state="rrrGGgrrrGGg"/>
+        <phase duration="3" state="rrryyyrrryyy"/>
+    </tlLogic>
+    <tlLogic id="B1" type="static" programID="fixed-x16" offset="110.4">
+        <phase duration="58" state="GGgrrrGGgrrr"/>
+        <phase duration="3" state="yyyrrryyyrrr"/>
+        <phase duration="56" state="rrrGGgrrrGGg"/>
+        <phase duration="3" state="rrryyyrrryyy"/>
+    </tlLogic>
+</additional>

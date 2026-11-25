@@ -53,6 +53,50 @@ uv run netgenerate --grid --grid.number 2 --grid.length 300 --grid.attach-length
 
 Junction ids are `A0`, `A1`, `B0` and `B1` (column letter, row number from the bottom), and the outer nodes are `left0`, `top1` and so on. Edge ids join the ids of their start and end node, for example `A0B0`.
 
+The traffic generator and the RL environment rely on these ids, on the turns of every approach and on one signal program per junction. `tests/main/test_grid_network.py` checks them on the network file, so a rebuilt network cannot change them unnoticed.
+
+#### Validation
+
+The network and its signal programs were checked as generated, with SUMO 1.28.0 ([#17](https://github.com/iwonieevo/trafficgen-signal-control/issues/17)).
+
+**Network.** The `netgenerate` command above recreates `grid.net.xml` exactly, apart from the header comment.
+
+- Nodes: four signalized junctions and eight dead ends, where vehicles enter and leave.
+- Edges: 24, one per direction, each with one lane at 13.89 m/s (50 km/h). Lanes are 285.6 m long between junctions and 92.8 m on the roads in and out, because the junction area is cut off the 300 m and 100 m.
+- Connections: every approach turns right, straight and left, which gives 12 connections per junction. There are no U-turns.
+- `--no-turnarounds` stays. The traffic generator leaves U-turns out, and its routes go from an entry road to an exit road, so U-turn connections would only add signal links that no vehicle uses.
+
+**Signal programs.** All four junctions have the same fixed-time program with a 90 s cycle, and all start at offset 0:
+
+| Phase | Duration | State | Meaning |
+|---|---|---|---|
+| 0 | 42 s | `GGgrrrGGgrrr` | Green for north and south |
+| 1 | 3 s | `yyyrrryyyrrr` | Yellow |
+| 2 | 42 s | `rrrGGgrrrGGg` | Green for west and east |
+| 3 | 3 s | `rrryyyrrryyy` | Yellow |
+
+Left turns are permitted, not protected (`g`): they give way to oncoming traffic. There is no all-red phase. Every green is followed by 3 s of yellow, and the runs below had no collisions, emergency braking or teleports.
+
+**Behaviour under load.** Measured with generated traffic: two hours of constant junction counts of 90, 30, 30 and 13 vehicles per hour for J1 to J4, about twice the Kaggle means, times a scale. Departures are `poisson`, and each number is the mean of one run with seed 1, so they show a direction and are not results.
+
+| Scale | Vehicles | Waiting time, 90 s cycle | Waiting time, 40 s cycle |
+|---|---|---|---|
+| 1 | 182 | 16.3 s | 10.0 s |
+| 10 | 1891 | 23.9 s | 12.0 s |
+| 15 | 2752 | 33.7 s (28 s) | 26.5 s (139 s) |
+| 20 | 3662 | 40.2 s (726 s) | |
+
+In brackets: the mean depart delay, the time a vehicle waits outside the network because its entry lane is full. It is below 1 s where it is not shown. The 40 s cycle is the same program with 17 s of green.
+
+What follows from this:
+
+- **The entry roads are too short for heavier traffic.** Almost all traffic enters at `A0`, on `left0A0` and `bottom0A0`: 675 vehicles per hour each at scale 15. One lane with 42 s of green in 90 s passes roughly 800, so from scale 15 the queues grow. An entry lane holds about 12 standing vehicles, and the rest of the queue waits outside the network, where the waiting time, detectors and the lane observations of an RL agent do not see it.
+- **The 90 s cycle is long for light traffic.** Up to scale 10, a 40 s cycle halves the waiting time. At scale 15 it has too little capacity: the depart delay grows from 28 s to 139 s. The cycle has to be tuned to the load that the experiments use.
+- **The junctions are not coordinated.** With offsets from `tlsCoordinator.py` of the SUMO tools, the waiting time at scale 10 drops from 23.9 s to 16.6 s with the same 90 s cycle.
+- **The Kaggle volume alone is too low to compare controllers.** At scale 1 the network is almost empty: 182 vehicles in two hours.
+
+Longer entry roads, tuned and coordinated fixed-time programs, detectors and an actuated controller follow in the next changes for #17.
+
 ## Traffic generator configs
 
 A scenario that the traffic generator can feed has a `scenario.toml`, which names the network file and the node of each junction. The traffic generator reads the roads and turns from the network file itself, so road ids are the edge ids of the scenario and a changed network needs no change in the config, unless a node was renamed or added. See [traffic-generation.md](traffic-generation.md#config).

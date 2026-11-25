@@ -43,13 +43,15 @@ A four-way signalized intersection with bidirectional roads and one lane per dir
 
 ### grid-2x2
 
-Four signalized junctions in a 2x2 grid, 300 m apart, with one lane per direction, 50 km/h and 100 m roads leading in and out of the grid. The traffic lights use the default fixed-time programs of SUMO. The demand is a placeholder: six flows, straight and with turns, over 600 seconds.
+Four signalized junctions in a 2x2 grid, 300 m apart, with one lane per direction, 50 km/h and 300 m roads leading in and out of the grid. The traffic lights use the default fixed-time programs of SUMO. The demand is a placeholder: six flows, straight and with turns, over 600 seconds.
 
 The network was generated with [netgenerate](https://sumo.dlr.de/docs/netgenerate.html); the options are also stored at the top of `grid.net.xml`:
 
 ```bash
-uv run netgenerate --grid --grid.number 2 --grid.length 300 --grid.attach-length 100 --default.lanenumber 1 --default.speed 13.89 --default-junction-type traffic_light --no-turnarounds -o scenarios/grid-2x2/grid.net.xml
+uv run netgenerate --grid --grid.number 2 --grid.length 300 --grid.attach-length 300 --default.lanenumber 1 --default.speed 13.89 --default-junction-type traffic_light --no-turnarounds -o scenarios/grid-2x2/grid.net.xml
 ```
+
+`netgenerate` prints a warning that it could not build a program for the traffic light `top1`. It can be ignored: `top1` is a dead end with nothing to control, and the four junctions get their programs.
 
 Junction ids are `A0`, `A1`, `B0` and `B1` (column letter, row number from the bottom), and the outer nodes are `left0`, `top1` and so on. Edge ids join the ids of their start and end node, for example `A0B0`.
 
@@ -57,12 +59,12 @@ The traffic generator and the RL environment rely on these ids, on the turns of 
 
 #### Validation
 
-The network and its signal programs were checked as generated, with SUMO 1.28.0 ([#17](https://github.com/iwonieevo/trafficgen-signal-control/issues/17)).
+The network and its signal programs were checked with SUMO 1.28.0 ([#17](https://github.com/iwonieevo/trafficgen-signal-control/issues/17)). One thing changed because of it: the roads in and out of the grid were 100 m long at first and are 300 m now. Ids, lanes, connections and signal programs are the same as before.
 
 **Network.** The `netgenerate` command above recreates `grid.net.xml` exactly, apart from the header comment.
 
 - Nodes: four signalized junctions and eight dead ends, where vehicles enter and leave.
-- Edges: 24, one per direction, each with one lane at 13.89 m/s (50 km/h). Lanes are 285.6 m long between junctions and 92.8 m on the roads in and out, because the junction area is cut off the 300 m and 100 m.
+- Edges: 24, one per direction, each with one lane at 13.89 m/s (50 km/h). Lanes are 285.6 m long between junctions and 292.8 m on the roads in and out, because the junction area is cut off the 300 m.
 - Connections: every approach turns right, straight and left, which gives 12 connections per junction. There are no U-turns.
 - `--no-turnarounds` stays. The traffic generator leaves U-turns out, and its routes go from an entry road to an exit road, so U-turn connections would only add signal links that no vehicle uses.
 
@@ -81,21 +83,22 @@ Left turns are permitted, not protected (`g`): they give way to oncoming traffic
 
 | Scale | Vehicles | Waiting time, 90 s cycle | Waiting time, 40 s cycle |
 |---|---|---|---|
-| 1 | 182 | 16.3 s | 10.0 s |
-| 10 | 1891 | 23.9 s | 12.0 s |
-| 15 | 2752 | 33.7 s (28 s) | 26.5 s (139 s) |
-| 20 | 3662 | 40.2 s (726 s) | |
+| 1 | 182 | 15.5 s | 9.7 s |
+| 10 | 1891 | 23.7 s | 11.5 s |
+| 15 | 2752 | 45.5 s (8 s) | 43.3 s (90 s) |
+| 20 | 3662 | 85.1 s (607 s) | 62.6 s (1053 s) |
 
 In brackets: the mean depart delay, the time a vehicle waits outside the network because its entry lane is full. It is below 1 s where it is not shown. The 40 s cycle is the same program with 17 s of green.
 
 What follows from this:
 
-- **The entry roads are too short for heavier traffic.** Almost all traffic enters at `A0`, on `left0A0` and `bottom0A0`: 675 vehicles per hour each at scale 15. One lane with 42 s of green in 90 s passes roughly 800, so from scale 15 the queues grow. An entry lane holds about 12 standing vehicles, and the rest of the queue waits outside the network, where the waiting time, detectors and the lane observations of an RL agent do not see it.
-- **The 90 s cycle is long for light traffic.** Up to scale 10, a 40 s cycle halves the waiting time. At scale 15 it has too little capacity: the depart delay grows from 28 s to 139 s. The cycle has to be tuned to the load that the experiments use.
-- **The junctions are not coordinated.** With offsets from `tlsCoordinator.py` of the SUMO tools, the waiting time at scale 10 drops from 23.9 s to 16.6 s with the same 90 s cycle.
+- **The entry roads have to hold the queues.** Almost all traffic enters at `A0`, on `left0A0` and `bottom0A0`: 675 vehicles per hour each at scale 15. One lane with 42 s of green in 90 s passes roughly 800, so from scale 15 the queues grow. A 100 m entry road holds about 12 standing vehicles, and the rest of the queue waits outside the network, where the waiting time, detectors and the lane observations of an RL agent do not see it: at scale 15 the waiting time was 33.7 s with a depart delay of 28 s. A 300 m entry road holds about 39, so the same queue stands in the network and is counted: 45.5 s and 8 s. Up to scale 10 both lengths give the same waiting time within 1 s.
+- **One lane per approach carries up to about scale 15.** Longer roads add no capacity. At scale 20, each entry road of `A0` gets 900 vehicles per hour, more than the roughly 800 that its lane passes, and the queue grows out of the network again.
+- **The 90 s cycle is long for light traffic.** Up to scale 10, a 40 s cycle halves the waiting time. At scale 15 it has too little capacity: the depart delay grows from 8 s to 90 s. The cycle has to be tuned to the load that the experiments use.
+- **The junctions are not coordinated.** With offsets from `tlsCoordinator.py` of the SUMO tools, the waiting time at scale 10 drops from 23.7 s to 16.1 s with the same 90 s cycle.
 - **The Kaggle volume alone is too low to compare controllers.** At scale 1 the network is almost empty: 182 vehicles in two hours.
 
-Longer entry roads, tuned and coordinated fixed-time programs, detectors and an actuated controller follow in the next changes for #17.
+Tuned and coordinated fixed-time programs, detectors and an actuated controller follow in the next changes for #17.
 
 ## Traffic generator configs
 
